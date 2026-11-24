@@ -1,5 +1,5 @@
 // App name lives here only; rename the app in one place.
-export const APP_NAME = "Grocery Tracker";
+export const APP_NAME = "Meron Pa?";
 
 // Firebase web config is public by design (security comes from firestore.rules).
 export const firebaseConfig = {

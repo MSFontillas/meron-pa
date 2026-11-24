@@ -1,4 +1,4 @@
-# Grocery Tracker (working name)
+# Meron Pa?
 
 A simple web app for tracking groceries and household supplies at home, and what to buy.
 Made for Filipino households: barcode scanning, "name it once" for products no database knows,

@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg"],
       manifest: {
-        name: "Grocery Tracker",
-        short_name: "Grocery",
+        name: "Meron Pa?",
+        short_name: "Meron Pa?",
         description: "Track groceries and household supplies at home, and what you need to buy.",
         start_url: base,
         scope: base,
