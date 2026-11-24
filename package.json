@@ -1,0 +1,30 @@
+{
+  "name": "grocery-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run src",
+    "test:rules": "firebase emulators:exec --only firestore,auth --project demo-grocery \"vitest run tests\"",
+    "test:e2e": "firebase emulators:exec --only firestore,auth --project demo-grocery \"playwright test --trace off\""
+  },
+  "dependencies": {
+    "barcode-detector": "3.2.4",
+    "firebase": "13.4.0",
+    "preact": "11.2.0",
+    "qrcode-generator": "2.0.4"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "@playwright/test": "1.63.0",
+    "@preact/preset-vite": "2.10.6",
+    "firebase-tools": "15.37.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vite-plugin-pwa": "2.0.0",
+    "vitest": "5.1.1"
+  }
+}

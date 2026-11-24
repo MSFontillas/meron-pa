@@ -1,0 +1,145 @@
+import { initializeApp } from "firebase/app";
+import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, signInAnonymously, connectAuthEmulator, type Auth } from "firebase/auth";
+import {
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator,
+  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, increment, serverTimestamp,
+  type Firestore,
+} from "firebase/firestore";
+import { firebaseConfig, useEmulator } from "../config";
+import { CATS, CAT_ICON, LIMITS, cleanName, type Cat, type Item, type Product } from "./types";
+
+let db: Firestore;
+let auth: Auth;
+
+/** Starts Firebase with an offline cache and an invisible anonymous sign-in (no account, no email). */
+export async function initStore(): Promise<void> {
+  const app = initializeApp(firebaseConfig);
+  // No popup/redirect sign-in is ever used, so skip that code (smaller download).
+  auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] });
+  db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+  if (useEmulator) {
+    const host = location.hostname || "127.0.0.1";
+    connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+    connectFirestoreEmulator(db, host, 8080);
+  }
+  await auth.authStateReady(); // restores the saved anonymous user, if any
+  if (!auth.currentUser) await signInAnonymously(auth);
+}
+
+const itemsCol = (home: string) => collection(db, "homes", home, "items");
+const itemRef = (home: string, id: string) => doc(db, "homes", home, "items", id);
+
+function toItem(id: string, d: Record<string, unknown>): Item | null {
+  if (typeof d.name !== "string" || typeof d.qty !== "number") return null;
+  const cat = (CATS as readonly string[]).includes(d.cat as string) ? (d.cat as Cat) : "Other";
+  return {
+    id, name: d.name, cat, qty: d.qty,
+    icon: typeof d.icon === "string" && d.icon ? d.icon : CAT_ICON[cat],
+    unit: typeof d.unit === "string" ? d.unit : "",
+    onList: d.onList === true, inBasket: d.inBasket === true,
+    barcode: typeof d.barcode === "string" ? d.barcode : undefined,
+  };
+}
+
+export function watchItems(home: string, onItems: (items: Item[]) => void, onError: (e: Error) => void): () => void {
+  return onSnapshot(itemsCol(home), (snap) => {
+    const items: Item[] = [];
+    snap.forEach((d) => { const it = toItem(d.id, d.data()); if (it) items.push(it); });
+    items.sort((a, b) => a.name.localeCompare(b.name));
+    onItems(items);
+  }, onError);
+}
+
+// Writes are not awaited by the UI: offline writes resolve only when the server confirms.
+type Fail = (e: unknown) => void;
+const stamp = () => ({ updatedAt: serverTimestamp() });
+
+export function findSame(items: Item[], name: string, barcode?: string): Item | undefined {
+  const n = name.toLowerCase();
+  return items.find((i) => (barcode && i.barcode === barcode) || i.name.toLowerCase() === n);
+}
+
+export interface NewThing { name: string; icon?: string; cat: Cat; unit?: string; barcode?: string }
+
+function newDoc(t: NewThing, qty: number, onList: boolean) {
+  const data: Record<string, unknown> = {
+    name: cleanName(t.name), icon: (t.icon || CAT_ICON[t.cat]).slice(0, LIMITS.icon), cat: t.cat,
+    qty, unit: (t.unit || "").slice(0, LIMITS.unit), onList, inBasket: false, ...stamp(),
+  };
+  if (t.barcode) data.barcode = t.barcode;
+  return data;
+}
+
+export function addToHome(home: string, items: Item[], t: NewThing, fail: Fail, qty = 1): void {
+  const n = Math.max(1, Math.min(LIMITS.qty, Math.round(qty)));
+  const same = findSame(items, t.name, t.barcode);
+  const p = same
+    ? updateDoc(itemRef(home, same.id), { qty: increment(n), ...stamp() })
+    : setDoc(doc(itemsCol(home)), newDoc(t, n, false));
+  p.catch(fail);
+}
+
+export function addToList(home: string, items: Item[], t: NewThing, fail: Fail): void {
+  const same = findSame(items, t.name, t.barcode);
+  const p = same
+    ? updateDoc(itemRef(home, same.id), { onList: true, ...stamp() })
+    : setDoc(doc(itemsCol(home)), newDoc(t, 0, true));
+  p.catch(fail);
+}
+
+export function changeQty(home: string, item: Item, delta: 1 | -1, fail: Fail): void {
+  if (delta === -1 && item.qty <= 1) return ranOut(home, item, fail);
+  updateDoc(itemRef(home, item.id), { qty: increment(delta), ...stamp() }).catch(fail);
+}
+
+export function ranOut(home: string, item: Item, fail: Fail): void {
+  updateDoc(itemRef(home, item.id), { qty: 0, onList: true, inBasket: false, ...stamp() }).catch(fail);
+}
+
+export function setInBasket(home: string, item: Item, inBasket: boolean, fail: Fail): void {
+  updateDoc(itemRef(home, item.id), { inBasket, ...stamp() }).catch(fail);
+}
+
+export function putAway(home: string, basket: Item[], fail: Fail): void {
+  const b = writeBatch(db);
+  for (const it of basket) b.update(itemRef(home, it.id), { onList: false, inBasket: false, qty: increment(1), ...stamp() });
+  b.commit().catch(fail);
+}
+
+export function editItem(home: string, item: Item, ch: { name: string; cat: Cat; qty: number; unit: string }, fail: Fail): void {
+  const qty = Math.max(0, Math.min(LIMITS.qty, Math.round(ch.qty)));
+  updateDoc(itemRef(home, item.id), {
+    name: cleanName(ch.name) || item.name, cat: ch.cat, qty, unit: ch.unit.slice(0, LIMITS.unit),
+    onList: qty === 0 ? true : item.onList, // nothing left at home: it goes on the list
+    icon: item.cat === ch.cat ? item.icon : CAT_ICON[ch.cat], ...stamp(),
+  }).catch(fail);
+}
+
+export function removeItem(home: string, item: Item, fail: Fail): void {
+  deleteDoc(itemRef(home, item.id)).catch(fail);
+}
+
+/** Copies this phone's items into another home (used when joining a shared list). */
+export async function copyItems(toHome: string, items: Item[]): Promise<void> {
+  const b = writeBatch(db);
+  for (const it of items) {
+    const d = newDoc({ name: it.name, icon: it.icon, cat: it.cat, unit: it.unit, barcode: it.barcode }, it.qty, it.onList);
+    b.set(doc(itemsCol(toHome)), d);
+  }
+  await b.commit();
+}
+
+// "Name it once": barcodes this home has named.
+export async function getSavedProduct(home: string, code: string): Promise<Product | null> {
+  try {
+    const s = await getDoc(doc(db, "homes", home, "products", code));
+    const d = s.data();
+    return d && typeof d.name === "string" ? (d as Product) : null;
+  } catch { return null; }
+}
+
+export function saveProduct(home: string, code: string, p: Product, fail: Fail): void {
+  setDoc(doc(db, "homes", home, "products", code), {
+    name: cleanName(p.name), icon: p.icon.slice(0, LIMITS.icon), cat: p.cat, size: p.size.slice(0, LIMITS.size),
+  }).catch(fail);
+}

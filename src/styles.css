@@ -1,0 +1,87 @@
+:root {
+  --bg: #FBF5E9; --surface: #FFFDF8; --ink: #2B2420; --muted: #685D53; --line: #EADFCC;
+  --leaf: #2C8A4B; --on-leaf: #FFFFFF; --leaf-soft: #E5EFD9;
+  --tomato: #C8432A; --butter: #E9B52A; --cam: #18201A; --cam-ink: #F2F6F2;
+  --shadow: 0 10px 30px rgba(43, 36, 32, .14);
+  --f-display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #1B1426; --surface: #261C35; --ink: #F0EAF7; --muted: #B6AAC8; --line: #3B2F50;
+  --leaf: #6BCB89; --on-leaf: #10201A; --leaf-soft: #2F2546; --tomato: #FF8A70; --cam: #110C19;
+  --shadow: 0 10px 30px rgba(0,0,0,.45); color-scheme: dark } }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { height: 100%; margin: 0 }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.45; -webkit-tap-highlight-color: transparent }
+button, input, select { font: inherit; color: inherit }
+button { cursor: pointer }
+:focus-visible { outline: 3px solid var(--butter); outline-offset: 2px }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; margin: 0; line-height: 1.15 }
+p { margin: 0 }
+
+.app { height: 100%; display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; padding-top: env(safe-area-inset-top, 0px) }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px max(18px, env(safe-area-inset-left, 0px)) 6px max(18px, env(safe-area-inset-right, 0px)) }
+.top h1 { font-size: 28px }
+.top-btn { border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 15px }
+.view { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px max(18px, env(safe-area-inset-right, 0px)) 24px max(18px, env(safe-area-inset-left, 0px)); display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 12px }
+.count { font-size: 15px; color: var(--muted) }
+.group-h { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-top: 6px }
+
+.item { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px; align-items: center }
+.pic { width: 52px; height: 52px; border-radius: 16px; background: var(--bg); display: grid; place-items: center; font-size: 30px }
+.item-name { border: 0; background: none; padding: 0; text-align: left; font-weight: 700; font-size: 19px; line-height: 1.2; overflow-wrap: anywhere }
+.item-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px }
+.stepper { display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 999px; padding: 4px }
+.stepper button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--leaf-soft); color: var(--leaf); font-size: 24px; font-weight: 700; line-height: 1 }
+.stepper output { min-width: 64px; text-align: center; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums }
+.ghost { border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: 9px 14px; font-weight: 700; font-size: 15px; min-height: 44px }
+
+.add-row { display: flex; gap: 8px }
+.add-row input, .field input, .field select, .new-name { flex: 1; min-width: 0; font-size: 18px; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); color: var(--ink) }
+.big { border: 0; background: var(--leaf); color: var(--on-leaf); border-radius: 16px; padding: 12px 18px; font-weight: 700; font-size: 18px; min-height: 48px }
+.big.outline { border: 2px solid var(--leaf); background: var(--surface); color: var(--leaf) }
+.big.danger { background: none; border: 2px solid var(--tomato); color: var(--tomato) }
+.check { display: grid; grid-template-columns: 44px 36px minmax(0, 1fr); gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 10px 12px; text-align: left; width: 100%; font-size: 19px; font-weight: 700 }
+.box { width: 40px; height: 40px; border-radius: 12px; border: 3px solid var(--leaf); display: grid; place-items: center; color: var(--on-leaf); font-size: 24px; background: var(--surface) }
+.check[aria-checked="true"] .box { background: var(--leaf) }
+.check[aria-checked="true"] .lbl { text-decoration: line-through; color: var(--muted) }
+.check .emoji { font-size: 26px }
+.basket { display: grid; gap: 8px; background: var(--leaf-soft); border-radius: 20px; padding: 12px; margin-top: 8px }
+.hint { font-size: 15px; color: var(--muted) }
+.quick-row { display: flex; flex-wrap: wrap; gap: 8px }
+.quick-row button { border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 12px; font-weight: 700; font-size: 16px; min-height: 44px }
+.quick-row button[aria-pressed="true"] { border-color: var(--leaf); background: var(--leaf-soft); color: var(--leaf) }
+.empty { text-align: center; color: var(--muted); padding: 28px 8px; display: grid; gap: 6px }
+.empty b { font-family: var(--f-display); font-size: 22px; color: var(--ink) }
+
+.cam { background: var(--cam); color: var(--cam-ink); border-radius: 26px; aspect-ratio: 4 / 3; max-height: 46vh; position: relative; overflow: hidden; display: grid; place-items: center }
+.cam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover }
+.frame { position: absolute; inset: 28% 14%; border: 4px solid var(--butter); border-radius: 14px; box-shadow: 0 0 0 999px rgba(0,0,0,.25) }
+.cam-msg { position: relative; padding: 16px; text-align: center }
+.result { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 16px; display: grid; gap: 12px }
+.result-top { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center }
+.result .pic { width: 64px; height: 64px; font-size: 38px }
+.meta { font-size: 14px; color: var(--muted) }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
+.link { border: 0; background: none; color: var(--leaf); font-weight: 700; text-decoration: underline; padding: 8px; justify-self: center; min-height: 44px }
+
+.nav { display: grid; grid-template-columns: 1fr 1fr 1fr; align-items: end; border-top: 1px solid var(--line); padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface) }
+.tab { border: 0; background: none; display: grid; justify-items: center; gap: 2px; font-weight: 700; font-size: 15px; color: var(--muted); padding: 4px; position: relative; min-height: 48px }
+.tab .ic { font-size: 26px; line-height: 1.1 }
+.tab[aria-current="page"] { color: var(--leaf) }
+.tab.scan .ic { width: 62px; height: 62px; border-radius: 50%; background: var(--leaf); color: var(--on-leaf); display: grid; place-items: center; margin-top: -26px; box-shadow: var(--shadow); font-size: 28px }
+.dot { position: absolute; top: 0; right: calc(50% - 30px); min-width: 22px; height: 22px; border-radius: 11px; background: var(--tomato); color: #fff; font-size: 13px; display: grid; place-items: center; padding: 0 6px }
+
+.sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; z-index: 5 }
+.sheet { background: var(--surface); width: 100%; max-width: 560px; border-radius: 28px 28px 0 0; padding: 20px 18px calc(22px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; max-height: 92vh; overflow-y: auto }
+.sheet h2 { font-size: 24px }
+.field { display: grid; gap: 4px }
+.field label { font-weight: 700; font-size: 16px }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.qr { justify-self: center; background: #fff; padding: 12px; border-radius: 16px }
+.qr svg { display: block; width: 200px; height: 200px }
+.share-link { font-size: 14px; word-break: break-all; background: var(--bg); border-radius: 12px; padding: 10px 12px; user-select: all }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); width: min(520px, calc(100% - 36px)); background: var(--ink); color: var(--bg); border-radius: 16px; padding: 12px 16px; font-weight: 700; text-align: center; z-index: 9 }
+.center { min-height: 100%; display: grid; place-items: center; text-align: center; padding: 24px; gap: 12px; align-content: center }

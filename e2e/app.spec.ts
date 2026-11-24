@@ -1,0 +1,102 @@
+import { test, expect, type Page } from "@playwright/test";
+import { fakeCamera } from "./fakeCamera";
+
+const nav = (p: Page, name: string) => p.getByRole("navigation").getByRole("button", { name });
+const card = (p: Page, name: string) => p.locator(`.item[data-item="${name}"]`);
+
+async function open(page: Page) {
+  await page.addInitScript(fakeCamera);
+  await page.route(/open(food|beauty|products)facts\.org/, (r) => {
+    if (r.request().url().includes("4801234012342"))
+      return r.fulfill({ json: { status: 1, product: { product_name: "Corned Beef", brands: "Purefoods", quantity: "150 g" } } });
+    return r.fulfill({ status: 404, json: {} });
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "At Home" })).toBeVisible();
+  await expect(page.getByText("Nothing here yet")).toBeVisible();
+}
+
+async function addByHand(page: Page, name: string, qty = 1) {
+  await page.getByRole("button", { name: "Add something by hand" }).click();
+  await page.getByLabel("Name").fill(name);
+  await page.getByLabel("How many at home?").fill(String(qty));
+  await page.getByRole("button", { name: "Save" }).click();
+}
+
+test("add, count, run out, shop with undo, put away", async ({ page }) => {
+  await open(page);
+  await addByHand(page, "Shampoo sachets", 2);
+  await expect(card(page, "Shampoo sachets").locator("output")).toHaveText(/^2/);
+  await card(page, "Shampoo sachets").getByRole("button", { name: "One more Shampoo sachets" }).click();
+  await expect(card(page, "Shampoo sachets").locator("output")).toHaveText(/^3/);
+  await card(page, "Shampoo sachets").getByRole("button", { name: "Ran out" }).click();
+  await expect(card(page, "Shampoo sachets")).toHaveCount(0);
+
+  await nav(page, "List").click();
+  await expect(page.getByText("1 to buy")).toBeVisible();
+  await page.getByRole("button", { name: "🥬 Kangkong" }).click();
+  await expect(page.getByText("2 to buy")).toBeVisible();
+  const row = (n: string) => page.locator(`.check[data-item="${n}"]`);
+  await row("Shampoo sachets").click();
+  await row("Kangkong").click();
+  await expect(page.getByRole("button", { name: "Put 2 items away" })).toBeVisible();
+  await row("Kangkong").click(); // undo
+  await expect(page.getByRole("button", { name: "Put 1 item away" })).toBeVisible();
+  await page.getByRole("button", { name: "Put 1 item away" }).click();
+  await expect(page.getByText("1 to buy")).toBeVisible();
+
+  await nav(page, "At Home").click();
+  await expect(card(page, "Shampoo sachets").locator("output")).toHaveText(/^1/);
+});
+
+test("scan: database product, then name an unknown one once", async ({ page }) => {
+  await open(page);
+  await nav(page, "Scan").click();
+  await page.evaluate(() => (window as any).__setBarcode("4801234012342"));
+  await page.getByRole("button", { name: "Scan barcode" }).click();
+  await expect(page.getByRole("heading", { name: "Purefoods Corned Beef" })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Add to At Home" }).click();
+
+  await page.evaluate(() => (window as any).__setBarcode("4809012090124"));
+  await page.getByRole("button", { name: "Scan barcode" }).click();
+  await expect(page.getByRole("heading", { name: "New product" })).toBeVisible({ timeout: 20_000 });
+  await page.getByLabel("Product name").fill("Ube jam");
+  await page.getByRole("button", { name: "Add to At Home" }).click();
+
+  await page.getByRole("button", { name: "Scan barcode" }).click(); // same barcode again
+  await expect(page.getByRole("heading", { name: "Ube jam" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Named by your home before")).toBeVisible();
+  await page.getByRole("button", { name: "Add to At Home" }).click();
+
+  await nav(page, "At Home").click();
+  await expect(card(page, "Purefoods Corned Beef")).toBeVisible();
+  await expect(card(page, "Ube jam").locator("output")).toHaveText(/^2/);
+});
+
+test("share link: a second phone joins and both see changes", async ({ browser }) => {
+  const a = await (await browser.newContext({ permissions: ["camera"], viewport: { width: 390, height: 844 } })).newPage();
+  await open(a);
+  await addByHand(a, "Rice, 5 kg", 1);
+  await a.getByRole("button", { name: "Share list" }).click();
+  const link = (await a.locator(".share-link").textContent())!;
+  expect(link).toMatch(/#join=[A-Za-z0-9_-]{22}$/);
+  await a.getByRole("button", { name: "Close" }).click();
+
+  const b = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  await b.goto(link);
+  await b.getByRole("button", { name: "Join", exact: true }).click();
+  await nav(b, "At Home").click();
+  await expect(card(b, "Rice, 5 kg")).toBeVisible();
+
+  await card(b, "Rice, 5 kg").getByRole("button", { name: "Ran out" }).click();
+  await nav(a, "List").click();
+  await expect(a.locator('.check[data-item="Rice, 5 kg"]')).toBeVisible();
+});
+
+test("keeps working offline", async ({ page, context }) => {
+  await open(page);
+  await context.setOffline(true);
+  await addByHand(page, "Toothpaste", 1);
+  await expect(card(page, "Toothpaste")).toBeVisible();
+  await context.setOffline(false);
+});

@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    // A home ID is a random 128-bit value; knowing it is the key to that list.
+    function okHome(h) { return h.matches('^[A-Za-z0-9_-]{22,64}$'); }
+    function cats() { return ['Food & drinks', 'Laundry', 'Bathroom', 'Cleaning', 'Baby', 'Other']; }
+
+    function validItem(d) {
+      return d.keys().hasOnly(['name', 'icon', 'cat', 'qty', 'unit', 'onList', 'inBasket', 'barcode', 'updatedAt'])
+        && d.keys().hasAll(['name', 'icon', 'cat', 'qty', 'unit', 'onList', 'inBasket', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 40
+        && d.icon is string && d.icon.size() <= 8
+        && d.cat in cats()
+        && d.qty is int && d.qty >= 0 && d.qty <= 999
+        && d.unit is string && d.unit.size() <= 12
+        && d.onList is bool && d.inBasket is bool
+        && (!('barcode' in d) || (d.barcode is string && d.barcode.matches('^[0-9]{8,14}$')))
+        && d.updatedAt == request.time;
+    }
+
+    function validProduct(d) {
+      return d.keys().hasOnly(['name', 'icon', 'cat', 'size'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 40
+        && d.icon is string && d.icon.size() <= 8
+        && d.cat in cats()
+        && d.size is string && d.size.size() <= 30;
+    }
+
+    match /homes/{homeId}/items/{itemId} {
+      allow read, delete: if signedIn() && okHome(homeId);
+      allow create, update: if signedIn() && okHome(homeId) && validItem(request.resource.data);
+    }
+
+    match /homes/{homeId}/products/{code} {
+      allow read: if signedIn() && okHome(homeId);
+      allow write: if signedIn() && okHome(homeId) && code.matches('^[0-9]{8,14}$') && validProduct(request.resource.data);
+    }
+    // Everything else, including listing homes, is denied by default.
+  }
+}
