@@ -1,5 +1,6 @@
 // A "home" is a shared list, addressed by an unguessable random ID (like a house key).
 const KEY = "homeId";
+const PREV = "prevHomeId";
 const ID_RE = /^[A-Za-z0-9_-]{22,64}$/;
 
 export function newHomeId(): string {
@@ -22,9 +23,18 @@ export function getHomeId(storage: Storage = localStorage): string {
   return id;
 }
 
+/** Switches lists; the current one is remembered so the user can go back to it. */
 export function setHomeId(id: string, storage: Storage = localStorage): void {
   if (!isHomeId(id)) throw new Error("Invalid home link");
-  try { storage.setItem(KEY, id); } catch { /* ignore */ }
+  try {
+    const cur = storage.getItem(KEY);
+    if (isHomeId(cur) && cur !== id) storage.setItem(PREV, cur);
+    storage.setItem(KEY, id);
+  } catch { /* ignore */ }
+}
+
+export function getPrevHomeId(storage: Storage = localStorage): string | null {
+  try { const p = storage.getItem(PREV); return isHomeId(p) ? p : null; } catch { return null; }
 }
 
 /** The link puts the ID after "#" so it never reaches the web host's logs. */

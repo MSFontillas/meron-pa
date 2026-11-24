@@ -16,18 +16,21 @@ export function Scan({ resolve, onAdd, onManual }: Props) {
   const [res, setRes] = useState<ScanResult | null>(null);
   const [name, setName] = useState("");
 
+  const alive = useRef(true);
   const stop = () => { stopRef.current?.(); stopRef.current = null; };
-  useEffect(() => stop, []);
+  useEffect(() => () => { alive.current = false; stop(); }, []);
 
   async function start() {
     setRes(null); setName(""); setState("scanning");
     try {
       const { startScanner } = await import("../scan/scanner");
-      stopRef.current = await startScanner(video.current!, async (code) => {
+      const s = await startScanner(video.current!, async (code) => {
         setState("looking");
         const r = await resolve(code);
         setRes(r); setName(r.product?.name ?? ""); setState("result");
       });
+      if (!alive.current) return s(); // user left the Scan tab while the camera was starting
+      stopRef.current = s;
     } catch (e) {
       setErr(e === "denied" ? "Camera access was blocked. Allow the camera for this app in your phone's settings, then try again."
         : "No camera found. You can still add things by hand.");

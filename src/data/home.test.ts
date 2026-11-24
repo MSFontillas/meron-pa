@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newHomeId, isHomeId, shareLink, joinIdFromHash, getHomeId } from "./home";
+import { newHomeId, isHomeId, shareLink, joinIdFromHash, getHomeId, setHomeId, getPrevHomeId } from "./home";
 
 const mem = (): Storage => {
   const m = new Map<string, string>();
@@ -15,6 +15,17 @@ describe("home ids and links", () => {
   it("keeps the same id on the same phone", () => {
     const s = mem();
     expect(getHomeId(s)).toBe(getHomeId(s));
+  });
+  it("remembers the previous list when switching, so it is never lost", () => {
+    const s = mem();
+    const first = getHomeId(s), second = newHomeId();
+    expect(getPrevHomeId(s)).toBeNull();
+    setHomeId(second, s);
+    expect(getHomeId(s)).toBe(second);
+    expect(getPrevHomeId(s)).toBe(first);
+    setHomeId(first, s); // go back
+    expect(getPrevHomeId(s)).toBe(second);
+    expect(() => setHomeId("bad", s)).toThrow();
   });
   it("round-trips a share link and rejects bad ones", () => {
     const id = newHomeId();

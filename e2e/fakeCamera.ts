@@ -24,5 +24,10 @@ export const fakeCamera = () => {
   };
   setInterval(draw, 50);
   (window as unknown as { __setBarcode: (c: string) => void }).__setBarcode = (c: string) => { code = c; draw(); };
-  navigator.mediaDevices.getUserMedia = async () => canvas.captureStream(20);
+  navigator.mediaDevices.getUserMedia = async () => {
+    const s = canvas.captureStream(20);
+    (window as unknown as { __stream: MediaStream }).__stream = s;
+    await new Promise((r) => setTimeout(r, 300)); // a real camera takes a moment to start
+    return s;
+  };
 };

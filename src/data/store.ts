@@ -121,12 +121,15 @@ export function removeItem(home: string, item: Item, fail: Fail): void {
 
 /** Copies this phone's items into another home (used when joining a shared list). */
 export async function copyItems(toHome: string, items: Item[]): Promise<void> {
-  const b = writeBatch(db);
-  for (const it of items) {
-    const d = newDoc({ name: it.name, icon: it.icon, cat: it.cat, unit: it.unit, barcode: it.barcode }, it.qty, it.onList);
-    b.set(doc(itemsCol(toHome)), d);
+  const commits: Promise<void>[] = [];
+  for (let i = 0; i < items.length; i += 400) { // Firestore allows at most 500 writes per batch
+    const b = writeBatch(db);
+    for (const it of items.slice(i, i + 400)) {
+      b.set(doc(itemsCol(toHome)), newDoc({ name: it.name, icon: it.icon, cat: it.cat, unit: it.unit, barcode: it.barcode }, it.qty, it.onList));
+    }
+    commits.push(b.commit());
   }
-  await b.commit();
+  await Promise.all(commits);
 }
 
 // "Name it once": barcodes this home has named.

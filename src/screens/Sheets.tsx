@@ -30,8 +30,9 @@ export function EditSheet({ item, onSave, onRemove, onClose }: {
   );
 }
 
-export function ShareSheet({ link, onClose, onNewList }: { link: string; onClose: () => void; onNewList: () => void }) {
+export function ShareSheet({ link, onClose, onNewList, onBack }: { link: string; onClose: () => void; onNewList: () => void; onBack?: () => void }) {
   const [msg, setMsg] = useState("");
+  const [sure, setSure] = useState(false);
   const svg = useMemo(() => { const q = qrcode(0, "M"); q.addData(link); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }, [link]);
   const copy = async () => {
     try { await navigator.clipboard.writeText(link); setMsg("Link copied"); } catch { setMsg("Press and hold the link to copy it"); }
@@ -44,6 +45,7 @@ export function ShareSheet({ link, onClose, onNewList }: { link: string; onClose
       <div class="sheet">
         <h2>Share this list</h2>
         <p class="hint">Anyone with this link can see and change your list, like a spare house key. Share it only with people at home. No sign-up needed.</p>
+        <p class="hint">Keep this link (send it to yourself). If your phone ever clears this app's data, opening the link brings your list back. Adding the app to your home screen helps your phone keep it.</p>
         <div class="qr" aria-label="QR code of the share link" dangerouslySetInnerHTML={{ __html: svg }} />
         <p class="share-link">{link}</p>
         <div class="two">
@@ -51,7 +53,10 @@ export function ShareSheet({ link, onClose, onNewList }: { link: string; onClose
           {"share" in navigator ? <button class="big" onClick={share}>Send…</button> : <button class="big" onClick={onClose}>Done</button>}
         </div>
         {msg && <p class="hint" role="status">{msg}</p>}
-        <button class="link" onClick={onNewList}>Start a new empty list on this phone</button>
+        {sure
+          ? <button class="big danger" onClick={onNewList}>Yes, start a new empty list</button>
+          : <button class="link" onClick={() => setSure(true)}>Start a new empty list on this phone</button>}
+        {onBack && <button class="link" onClick={onBack}>Go back to my previous list</button>}
         <button class="link" onClick={onClose}>Close</button>
       </div>
     </div>

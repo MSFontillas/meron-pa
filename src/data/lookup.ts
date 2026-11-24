@@ -23,8 +23,10 @@ export async function lookupBarcode(code: string, fetchFn: typeof fetch = fetch)
   if (!isBarcode(code)) return null;
   for (const s of SOURCES) {
     try {
+      const ctl = new AbortController(); // AbortSignal.timeout is missing on iOS < 16
+      const t = setTimeout(() => ctl.abort(), 6000);
       const r = await fetchFn(`${s.host}/api/v2/product/${code}.json?fields=product_name,product_name_en,brands,quantity,categories_tags`,
-        { signal: AbortSignal.timeout(6000) });
+        { signal: ctl.signal }).finally(() => clearTimeout(t));
       if (!r.ok) continue;
       const j = await r.json();
       const p = j?.product;

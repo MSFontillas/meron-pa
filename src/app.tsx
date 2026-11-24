@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { APP_NAME } from "./config";
-import { getHomeId, setHomeId, newHomeId, shareLink, joinIdFromHash } from "./data/home";
+import { getHomeId, setHomeId, getPrevHomeId, newHomeId, shareLink, joinIdFromHash } from "./data/home";
 import * as store from "./data/store";
 import { lookupBarcode } from "./data/lookup";
 import { CAT_ICON, type Item } from "./data/types";
@@ -86,11 +86,10 @@ export function App() {
     setEdit(null);
   };
 
-  const join = async (bring: boolean) => {
+  const join = (bring: boolean) => {
     if (!joinId) return;
-    if (bring && list.length) {
-      try { await store.copyItems(joinId, list); } catch { say("Couldn't bring your items. Joined anyway."); }
-    }
+    // Not awaited: offline writes only resolve once the server confirms them.
+    if (bring && list.length) store.copyItems(joinId, list).catch(() => say("Couldn't bring your items. Your old list is still under \"Go back\" in Share list."));
     setHomeId(joinId); setHome(joinId); setJoinId(null); clearHash(); setTab("list");
     say("You're now on the shared list");
   };
@@ -122,7 +121,8 @@ export function App() {
       {edit && <EditSheet item={edit === "new" ? null : edit} onSave={saveEdit} onClose={() => setEdit(null)}
         onRemove={edit === "new" ? undefined : () => { store.removeItem(home, edit, fail); setEdit(null); say("Removed"); }} />}
       {sharing && <ShareSheet link={shareLink(home)} onClose={() => setSharing(false)}
-        onNewList={() => { const id = newHomeId(); setHomeId(id); setHome(id); setSharing(false); say("New empty list started"); }} />}
+        onNewList={() => { const id = newHomeId(); setHomeId(id); setHome(id); setSharing(false); say("New empty list started"); }}
+        onBack={getPrevHomeId() ? () => { const id = getPrevHomeId()!; setHomeId(id); setHome(id); setSharing(false); say("Back on your previous list"); } : undefined} />}
       {joinId && joinId !== home && <JoinSheet myCount={list.length} onJoin={join} onCancel={() => { setJoinId(null); clearHash(); }} />}
       {toast && <div class="toast" role="status">{toast}</div>}
     </div>
