@@ -34,6 +34,11 @@ Each phone gets a random 128-bit "home" ID. Sharing sends that ID in the link af
    2. **Settings → Pages → Source: GitHub Actions**.
    3. Push to `main`. The app appears at `https://<user>.github.io/<repo>/`.
 3. **Firebase → Authentication → Settings → Authorized domains**: add `<user>.github.io`.
+4. **App Check** (stops scripts from using up the free daily quota)
+   1. Go to google.com/recaptcha/admin/create → type **reCAPTCHA v3** (score based), domain `<user>.github.io`. Copy the **site key** and **secret key**.
+   2. Firebase console → **Build → App Check → Apps** → your web app → **reCAPTCHA** → paste the **secret key**. Set token time to live to **1 day** (fewer reCAPTCHA checks; the free tier allows 10,000 a month).
+   3. GitHub → Settings → Secrets and variables → Actions → Variables: add `RECAPTCHA_SITE_KEY` with the **site key** (public). Re-run the workflow.
+   4. Open the app on your phone, then check **App Check → APIs → Cloud Firestore**: when most requests show as verified, click **Enforce**.
 
 ## Develop
 

@@ -139,3 +139,11 @@ test("joining a shared list works with no signal", async ({ browser }) => {
   await expect(b.getByText("You're now on the shared list")).toBeVisible();
   await ctx.setOffline(false);
 });
+
+test("refuses to run inside another site's frame", async ({ page }) => {
+  await page.goto("/");
+  await page.setContent(`<iframe src="${page.url()}" width="390" height="600"></iframe>`);
+  const f = page.frameLocator("iframe");
+  await expect(f.getByText("Open Meron Pa? directly")).toBeVisible();
+  await expect(f.getByRole("heading", { name: "At Home" })).toHaveCount(0);
+});

@@ -5,7 +5,8 @@ import {
   collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, increment, serverTimestamp,
   type Firestore,
 } from "firebase/firestore";
-import { firebaseConfig, useEmulator } from "../config";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { appCheckKey, firebaseConfig, useEmulator } from "../config";
 import { CATS, CAT_ICON, LIMITS, cleanName, type Cat, type Item, type Product } from "./types";
 
 let db: Firestore;
@@ -14,6 +15,8 @@ let auth: Auth;
 /** Starts Firebase with an offline cache and an invisible anonymous sign-in (no account, no email). */
 export async function initStore(): Promise<void> {
   const app = initializeApp(firebaseConfig);
+  // App Check proves requests come from this app on a real browser, so scripts can't burn the free quota.
+  if (appCheckKey && !useEmulator) initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckKey), isTokenAutoRefreshEnabled: true });
   // No popup/redirect sign-in is ever used, so skip that code (smaller download).
   auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] });
   db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });

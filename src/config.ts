@@ -9,5 +9,8 @@ export const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID ?? "demo-app",
 };
 
+// reCAPTCHA v3 site key for Firebase App Check (public). Empty = App Check off (local and tests).
+export const appCheckKey: string = import.meta.env.VITE_RECAPTCHA_SITE_KEY ?? "";
+
 // Local development and tests talk to the Firebase emulators.
 export const useEmulator = import.meta.env.VITE_USE_EMULATOR === "1" || !import.meta.env.VITE_FIREBASE_PROJECT_ID;
