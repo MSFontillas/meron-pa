@@ -14,14 +14,15 @@ export function AtHome({ items, sizes, onInc, onDec, onOut, onEdit, onAdd }: Pro
           {home.filter((i) => i.cat === c).map((i) => (
             <div class="item" key={i.id} data-item={i.name}>
               <span class="pic" aria-hidden="true">{i.icon}</span>
-              <button class="item-name" onClick={() => onEdit(i)}>{i.name}{i.barcode && sizes[i.barcode] && <small class="size">{sizes[i.barcode]}</small>}</button>
-              <div class="item-actions">
-                <div class="stepper">
-                  <button onClick={() => onDec(i)} aria-label={`One less ${i.name}`}>−</button>
-                  <output>{i.qty} {i.unit}</output>
-                  <button onClick={() => onInc(i)} aria-label={`One more ${i.name}`}>+</button>
-                </div>
-                <button class="ghost" onClick={() => onOut(i)}>Ran out</button>
+              <div class="item-main">
+                <button class="item-name" onClick={() => onEdit(i)}>{i.name}</button>
+                <small class="size">{[i.unit, i.barcode && sizes[i.barcode]].filter(Boolean).join(" · ")}</small>
+                <button class="ranout" onClick={() => onOut(i)}>Ran out</button>
+              </div>
+              <div class="stepper">
+                <button onClick={() => onDec(i)} aria-label={`One less ${i.name}`}>−</button>
+                <output aria-label={`${i.qty} at home`}>{i.qty}</output>
+                <button onClick={() => onInc(i)} aria-label={`One more ${i.name}`}>+</button>
               </div>
             </div>
           ))}

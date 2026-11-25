@@ -29,17 +29,21 @@ p { margin: 0 }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px max(18px, env(safe-area-inset-left, 0px)) 6px max(18px, env(safe-area-inset-right, 0px)) }
 .top h1 { font-size: 28px }
 .top-btn { border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 15px }
-.view { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px max(18px, env(safe-area-inset-right, 0px)) 24px max(18px, env(safe-area-inset-left, 0px)); display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 12px }
+.view { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 8px max(18px, env(safe-area-inset-right, 0px)) 24px max(18px, env(safe-area-inset-left, 0px)); display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 8px }
 .count { font-size: 15px; color: var(--muted) }
 .group-h { font-size: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-top: 6px }
 
-.item { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 4px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px; align-items: center }
+.item { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 8px 10px; align-items: center }
+.item .pic { width: 44px; height: 44px; font-size: 26px; border-radius: 14px }
+.item-main { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; min-width: 0 }
+.item-main .item-name { flex-basis: 100% }
+.item-main .size:empty { display: none }
+.ranout { border: 0; background: none; padding: 4px 0; min-height: 28px; color: var(--tomato); font-weight: 700; font-size: 14px; text-decoration: underline }
 .pic { width: 52px; height: 52px; border-radius: 16px; background: var(--bg); display: grid; place-items: center; font-size: 30px }
-.item-name { border: 0; background: none; padding: 0; text-align: left; font-weight: 700; font-size: 19px; line-height: 1.2; overflow-wrap: anywhere }
-.item-actions { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 4px }
+.item-name { border: 0; background: none; padding: 0; text-align: left; font-weight: 700; font-size: 18px; line-height: 1.2; overflow-wrap: anywhere }
 .stepper { display: flex; align-items: center; gap: 4px; background: var(--bg); border-radius: 999px; padding: 4px }
-.stepper button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--leaf-soft); color: var(--leaf); font-size: 24px; font-weight: 700; line-height: 1 }
-.stepper output { min-width: 64px; text-align: center; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums }
+.stepper button { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--leaf-soft); color: var(--leaf); font-size: 24px; font-weight: 700; line-height: 1 }
+.stepper output { min-width: 36px; text-align: center; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums }
 .ghost { border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: 9px 14px; font-weight: 700; font-size: 15px; min-height: 44px }
 
 .add-row { display: flex; gap: 8px }
