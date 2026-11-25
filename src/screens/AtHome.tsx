@@ -1,12 +1,13 @@
 import { CATS, type Item } from "../data/types";
 import { Swipe } from "./Swipe";
 
-interface Props { items: Item[]; sizes: Record<string, string>; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onDelete: (i: Item) => void; onEdit: (i: Item) => void; onAdd?: () => void }
+interface Props { items: Item[]; sizes: Record<string, string>; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onDelete: (i: Item) => void; onEdit: (i: Item) => void; onAdd?: () => void; onCheck?: () => void }
 
-export function AtHome({ items, sizes, onInc, onDec, onOut, onDelete, onEdit, onAdd }: Props) {
+export function AtHome({ items, sizes, onInc, onDec, onOut, onDelete, onEdit, onAdd, onCheck }: Props) {
   const home = items.filter((i) => i.qty > 0);
   return (
     <>
+      {onCheck && <button class="big home-check" onClick={onCheck}>Check stock before shopping</button>}
       <p class="count">{home.length} {home.length === 1 ? "item" : "items"} at home</p>
       {home.length === 0 && <div class="empty"><b>Nothing here yet</b>Scan something, or add it by hand.</div>}
       {CATS.filter((c) => home.some((i) => i.cat === c)).map((c) => (

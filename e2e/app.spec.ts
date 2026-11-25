@@ -103,7 +103,7 @@ test("scan to List warns when you still have some; scan to At Home takes it off 
   await page.getByRole("button", { name: "Add to List" }).click();
   await expect(page.getByText("Purefoods Corned Beef added to your list")).toBeVisible();
 
-  await page.reload(); // the switch is remembered
+  await nav(page, "At Home").click(); // leave and come back: the switch is remembered
   await nav(page, "Scan").click();
   await expect(mode(page, "List")).toHaveAttribute("aria-pressed", "true");
   await mode(page, "At Home").click();
@@ -225,20 +225,18 @@ test("practice demo on first open: every step, nothing saved, not shown again", 
   await page.goto("/");
   const demo = page.getByRole("dialog", { name: "Practice" });
   const row = (n: string) => demo.locator(`.item[data-item="${n}"]`);
-  await expect(demo).toContainText("Tap + on Eggs");
-  await swipe(page, row("Rice"), "right"); // wrong move: does not advance
-  await expect(demo).toContainText("Tap + on Eggs");
-  await row("Eggs").getByRole("button", { name: "One more Eggs" }).click();
-  await swipe(page, row("Toyo"), "right");
-  await expect(demo).toContainText("Swipe Rice to the left");
-  await page.reload(); // still not finished: shows again from the start
-  await expect(demo).toContainText("Tap + on Eggs");
-  await row("Eggs").getByRole("button", { name: "One more Eggs" }).click();
-  await swipe(page, row("Toyo"), "right");
-  await swipe(page, row("Rice"), "left");
-  await expect(row("Rice")).toHaveCount(0);
+  await expect(demo).toContainText("Toyo is used up");
+  await demo.getByRole("button", { name: /^Ubos na/ }).click();
+  await expect(demo).toContainText("Rice ran out too");
+  await swipe(page, row("Eggs"), "right"); // wrong row: does not advance
+  await expect(demo).toContainText("Rice ran out too");
+  await page.reload(); // not finished: starts again
+  await demo.getByRole("button", { name: /^Ubos na/ }).click();
+  await swipe(page, row("Rice"), "right");
+  await swipe(page, row("Eggs"), "left");
+  await expect(row("Eggs")).toHaveCount(0);
   await demo.getByRole("button", { name: "Undo" }).click();
-  await expect(row("Rice")).toBeVisible();
+  await expect(row("Eggs")).toBeVisible();
   await expect(demo).toContainText("tap Toyo to put it in your basket");
   await demo.locator('.check[data-item="Toyo"]').click();
   await demo.getByRole("button", { name: "Put 1 item away" }).click();
@@ -254,4 +252,85 @@ test("practice demo can be skipped", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("dialog", { name: "Practice" }).getByRole("button", { name: "Skip" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("stock check before shopping: out, low, below usual, back, list says how many", async ({ page }) => {
+  await open(page);
+  await addByHand(page, "Eggs", 6);
+  await addByHand(page, "Rice", 2);
+  await addByHand(page, "Toyo", 1);
+  await card(page, "Eggs").getByRole("button", { name: "Eggs", exact: true }).click();
+  await page.getByLabel("Usually keep (optional)").fill("12");
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await page.getByRole("button", { name: "Check stock before shopping" }).click();
+  const sc = page.getByRole("dialog", { name: "Check stock" });
+  await expect(sc.getByRole("heading", { level: 2 })).toHaveText("Eggs"); // alphabetical within Food & drinks
+  await expect(sc).toContainText("Usually keep 12");
+  await sc.getByRole("button", { name: "One less" }).click(); // 5 left
+  await expect(sc.getByRole("button", { name: /^Meron pa/ })).toContainText("Below your usual 12");
+  await sc.getByRole("button", { name: /^Meron pa/ }).click();
+  await expect(sc.getByRole("heading", { level: 2 })).toHaveText("Rice");
+  await sc.getByRole("button", { name: /^Ubos na/ }).click();
+  await sc.getByRole("button", { name: "Back" }).click(); // change Rice to "low"
+  await sc.getByRole("button", { name: /^Kaunti na/ }).click();
+  await sc.getByRole("button", { name: /^Meron pa/ }).click(); // Toyo: enough
+  await expect(sc).toContainText("2 things added to your list");
+  await sc.getByRole("button", { name: "Go to my list" }).click();
+
+  await expect(page.getByText("2 to buy")).toBeVisible();
+  await expect(page.locator('.check[data-item="Eggs"]')).toContainText("Buy 7");
+  await expect(page.locator('.check[data-item="Toyo"]')).toHaveCount(0);
+  await page.locator('.check[data-item="Eggs"]').click();
+  await page.getByRole("button", { name: "Put 1 item away" }).click();
+  await nav(page, "At Home").click();
+  await expect(card(page, "Eggs").locator("output")).toHaveText("12"); // filled up to the usual amount
+  await expect(card(page, "Rice").locator("output")).toHaveText("2"); // low keeps the count
+});
+
+test("screen reader tree: names, roles and states", async ({ page }) => {
+  await open(page);
+  await addByHand(page, "Toyo", 1);
+  await expect(page.getByRole("navigation", { name: "Tabs" })).toMatchAriaSnapshot(`
+    - navigation "Tabs":
+      - button "At Home"
+      - button "Scan"
+      - button "List"
+  `);
+  await expect(page.getByRole("main")).toMatchAriaSnapshot(`
+    - main:
+      - button "Check stock before shopping"
+      - button "Toyo"
+      - button "One less Toyo"
+      - status "1 at home"
+      - button "One more Toyo"
+  `);
+  await nav(page, "Scan").click();
+  await expect(page.getByRole("group", { name: "Scanned items go to" })).toMatchAriaSnapshot(`
+    - group "Scanned items go to":
+      - button "At Home" [pressed]
+      - button "List"
+  `);
+  await nav(page, "At Home").click();
+  await page.getByRole("button", { name: "Check stock before shopping" }).click();
+  await expect(page.getByRole("dialog", { name: "Check stock" })).toMatchAriaSnapshot(`
+    - dialog "Check stock":
+      - banner:
+        - heading "Check stock" [level=1]
+        - button "Stop"
+      - paragraph: 1 of 1
+      - heading "Toyo" [level=2]
+      - paragraph: "Last count: 1"
+      - group "How many left? (optional)":
+        - button "One less"
+        - status
+        - button "One more"
+      - button /Ubos na/
+      - button /Kaunti na/
+      - button /Meron pa/
+  `);
+  await page.getByRole("button", { name: /^Ubos na/ }).click();
+  await page.getByRole("button", { name: "Go to my list" }).click();
+  await expect(page.getByRole("checkbox", { name: "Toyo" })).toHaveAttribute("aria-checked", "false");
+  await expect(page.getByRole("status")).toHaveCount(0);
 });

@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import type { Item } from "../data/types";
 import { AtHome } from "./AtHome";
 import { List } from "./List";
+import { StockCheck } from "./StockCheck";
 
 const KEY = "tutorialSeen";
 export function tutorialSeen(): boolean { try { return localStorage.getItem(KEY) === "1"; } catch { return true; } }
@@ -10,10 +11,10 @@ const sample = (id: string, name: string, icon: string, qty: number): Item =>
   ({ id, name, icon, cat: "Food & drinks", qty, unit: "", onList: false, inBasket: false });
 
 const HINTS = [
-  "Tap + on Eggs. You bought another tray.",
-  "Toyo ran out. Swipe it to the right 👉",
-  "Swipe Rice to the left 👈 to delete it.",
-  "Oops! Tap Undo to bring Rice back.",
+  "Before shopping, check what's left. Toyo is used up: tap Ubos na.",
+  "Rice ran out too. Swipe it to the right 👉",
+  "Swipe Eggs to the left 👈 to delete it.",
+  "Oops! Tap Undo to bring Eggs back.",
   "At the store: tap Toyo to put it in your basket.",
   "Back home: tap \"Put 1 item away\".",
 ];
@@ -30,15 +31,22 @@ export function Tutorial({ onDone }: { onDone: () => void }) {
   const at = (s: number, ok: boolean) => { if (ok && step === s) setStep(s + 1); };
 
   const home = <AtHome items={items} sizes={{}} onEdit={() => {}}
-    onInc={(i) => { change(i.id, { qty: i.qty + 1 }); at(0, i.id === "e"); }}
+    onInc={(i) => change(i.id, { qty: i.qty + 1 })}
     onDec={(i) => change(i.id, i.qty <= 1 ? { qty: 0, onList: true } : { qty: i.qty - 1 })}
-    onOut={(i) => { change(i.id, { qty: 0, onList: true, inBasket: false }); at(1, i.id === "t"); }}
-    onDelete={(i) => { drop(i); at(2, i.id === "r"); }} />;
+    onOut={(i) => { change(i.id, { qty: 0, onList: true, inBasket: false }); at(1, i.id === "r"); }}
+    onDelete={(i) => { drop(i); at(2, i.id === "e"); }} />;
   const list = <List items={items} sizes={{}}
     onTick={(i, v) => { change(i.id, { inBasket: v }); at(4, i.id === "t" && v); }}
     onRemove={(i) => (i.qty > 0 ? change(i.id, { onList: false, inBasket: false }) : drop(i))}
     onPutAway={(b) => { b.forEach((i) => change(i.id, { onList: false, inBasket: false, qty: i.qty + 1 })); at(5, true); }} />;
 
+  const tip = <p class="tut-hint" role="status"><small>Practice {step + 1} of 6 · nothing here is saved</small>{HINTS[step]}</p>;
+  if (step === 0) return (
+    <div role="dialog" aria-modal="true" aria-label="Practice">
+      <StockCheck items={items.filter((i) => i.id === "t")} sizes={{}} hint={tip} closeLabel="Skip" onClose={done}
+        onAnswer={(i, s) => { change(i.id, { qty: s.qty, onList: s.onList }); at(0, s.onList); }} />
+    </div>
+  );
   return (
     <div class="tut" role="dialog" aria-modal="true" aria-label="Practice">
       <header class="top">
@@ -46,10 +54,10 @@ export function Tutorial({ onDone }: { onDone: () => void }) {
         <button class="top-btn" onClick={done}>Skip</button>
       </header>
       {step < 6 ? <>
-        <p class="tut-hint" role="status"><small>Practice {step + 1} of 6 · nothing here is saved</small>{HINTS[step]}</p>
+        {tip}
         <main class="view">{step >= 4 ? list : home}</main>
         {undo && <div class="toast"><span>{undo.name} deleted</span>
-          <button class="toast-undo" onClick={() => { setItems((xs) => [...xs, undo]); setUndo(null); if (step === 3 && undo.id === "r") setTimeout(() => setStep(4), 1200); /* let them see Rice come back */ }}>Undo</button></div>}
+          <button class="toast-undo" onClick={() => { setItems((xs) => [...xs, undo]); setUndo(null); if (step === 3 && undo.id === "e") setTimeout(() => setStep(4), 1200); /* let them see Eggs come back */ }}>Undo</button></div>}
       </> : (
         <div class="tut-end">
           <span aria-hidden="true">🎉</span>

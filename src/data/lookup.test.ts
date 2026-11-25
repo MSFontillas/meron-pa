@@ -39,3 +39,12 @@ describe("lookupBarcode", () => {
     expect(pickIcon("Mystery item", "Cleaning")).toBe("🧽");
   });
 });
+
+import { toBuy } from "./types";
+describe("toBuy", () => {
+  it("buys up to the usual amount, at least 1; 0 when no usual amount", () => {
+    expect(toBuy({ qty: 2, want: 12 })).toBe(10);
+    expect(toBuy({ qty: 12, want: 12 })).toBe(1);
+    expect(toBuy({ qty: 0 })).toBe(0);
+  });
+});

@@ -41,6 +41,7 @@ function toItem(id: string, d: Record<string, unknown>): Item | null {
     unit: typeof d.unit === "string" ? d.unit : "",
     onList: d.onList === true, inBasket: d.inBasket === true,
     barcode: typeof d.barcode === "string" ? d.barcode : undefined,
+    want: typeof d.want === "number" && d.want > 0 ? d.want : undefined,
   };
 }
 
@@ -62,7 +63,7 @@ export function findSame(items: Item[], name: string, barcode?: string): Item | 
   return items.find((i) => (barcode && i.barcode === barcode) || i.name.toLowerCase() === n);
 }
 
-export interface NewThing { name: string; icon?: string; cat: Cat; unit?: string; barcode?: string }
+export interface NewThing { name: string; icon?: string; cat: Cat; unit?: string; barcode?: string; want?: number }
 
 function newDoc(t: NewThing, qty: number, onList: boolean) {
   const data: Record<string, unknown> = {
@@ -70,6 +71,7 @@ function newDoc(t: NewThing, qty: number, onList: boolean) {
     qty, unit: (t.unit || "").slice(0, LIMITS.unit), onList, inBasket: false, ...stamp(),
   };
   if (t.barcode) data.barcode = t.barcode;
+  if (t.want) data.want = Math.min(LIMITS.qty, Math.round(t.want));
   return data;
 }
 
@@ -104,13 +106,17 @@ export function setInBasket(home: string, item: Item, inBasket: boolean, fail: F
 
 export function putAway(home: string, basket: Item[], fail: Fail): void {
   const b = writeBatch(db);
-  for (const it of basket) b.update(itemRef(home, it.id), { onList: false, inBasket: false, qty: increment(1), ...stamp() });
+  // Bought up to the usual amount when there is one; otherwise one more.
+  for (const it of basket) b.update(itemRef(home, it.id), { onList: false, inBasket: false, qty: it.want ? Math.max(it.want, it.qty) : increment(1), ...stamp() });
   b.commit().catch(fail);
 }
 
-export function editItem(home: string, item: Item, ch: { name: string; cat: Cat; qty: number; unit: string }, fail: Fail): void {
+export function editItem(home: string, item: Item, ch: { name: string; cat: Cat; qty: number; unit: string; want: number }, fail: Fail): void {
   const qty = Math.max(0, Math.min(LIMITS.qty, Math.round(ch.qty)));
+  const want = Math.max(0, Math.min(LIMITS.qty, Math.round(ch.want || 0)));
   updateDoc(itemRef(home, item.id), {
+    // only written when set, so homes whose rules predate "want" keep working
+    ...(want || item.want ? { want } : {}),
     name: cleanName(ch.name) || item.name, cat: ch.cat, qty, unit: ch.unit.slice(0, LIMITS.unit),
     onList: qty === 0 ? true : item.onList, // nothing left at home: it goes on the list
     icon: pickIcon(ch.name, ch.cat), ...stamp(),
@@ -124,7 +130,13 @@ export function restore(home: string, it: Item, fail: Fail): void {
     onList: it.onList, inBasket: it.inBasket, ...stamp(),
   };
   if (it.barcode) data.barcode = it.barcode;
+  if (it.want) data.want = it.want;
   setDoc(itemRef(home, it.id), data).catch(fail);
+}
+
+/** Stock check answer: what's left, and whether it goes on the list. */
+export function setStock(home: string, it: Item, s: { qty: number; onList: boolean }, fail: Fail): void {
+  updateDoc(itemRef(home, it.id), { qty: Math.max(0, Math.min(LIMITS.qty, s.qty)), onList: s.onList, inBasket: false, ...stamp() }).catch(fail);
 }
 
 /** Off the shopping list. Still stocked at home: keep it there; otherwise it is gone. */

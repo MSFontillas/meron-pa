@@ -46,6 +46,12 @@ describe("firestore rules", () => {
     await assertFails(setDoc(ref, item({ barcode: "abc" })));
     await assertFails(setDoc(ref, item({ updatedAt: new Date(0) })));
   });
+  it("allows an optional usual amount (want) of 0-999 only", async () => {
+    const db = env.authenticatedContext("u1").firestore();
+    await assertSucceeds(setDoc(doc(db, "homes", HOME, "items", "w1"), item({ want: 12 })));
+    await assertFails(setDoc(doc(db, "homes", HOME, "items", "w2"), item({ want: 1000 })));
+    await assertFails(setDoc(doc(db, "homes", HOME, "items", "w3"), item({ want: "12" })));
+  });
   it("validates named products", async () => {
     const db = env.authenticatedContext("phone1").firestore();
     await assertSucceeds(setDoc(doc(db, "homes", HOME, "products", "4809012090124"), { name: "Ube jam", icon: "📦", cat: "Other", size: "" }));

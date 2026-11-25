@@ -16,6 +16,8 @@ export interface Item {
   onList: boolean;
   inBasket: boolean;
   barcode?: string;
+  /** How many the household usually keeps; the list then says how many to buy. */
+  want?: number;
 }
 
 /** A barcode the household (or a public database) has named. */
@@ -27,6 +29,9 @@ export interface Product {
 }
 
 export const LIMITS = { name: 40, unit: 12, icon: 8, size: 30, qty: 999 } as const;
+
+/** How many to buy: up to the usual amount, at least 1. 0 = no usual amount set. */
+export const toBuy = (it: Pick<Item, "qty" | "want">) => (it.want ? Math.max(it.want - it.qty, 1) : 0);
 
 export function cleanName(s: string): string {
   return s.replace(/\s+/g, " ").trim().slice(0, LIMITS.name);

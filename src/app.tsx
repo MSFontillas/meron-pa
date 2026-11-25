@@ -9,6 +9,7 @@ import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
 import { Scan, type ScanResult, type Where } from "./screens/Scan";
 import { Tutorial, tutorialSeen } from "./screens/Tutorial";
+import { StockCheck } from "./screens/StockCheck";
 import { EditSheet, ShareSheet, JoinSheet, type EditValues } from "./screens/Sheets";
 
 type Tab = "home" | "scan" | "list";
@@ -24,6 +25,7 @@ export function App() {
   const [sharing, setSharing] = useState(false);
   const [joinId, setJoinId] = useState<string | null>(() => joinIdFromHash(location.hash));
   const [toast, setToast] = useState<{ msg: string; undo?: () => void } | null>(null);
+  const [checking, setChecking] = useState(false);
   const [tutorial, setTutorial] = useState(() => !tutorialSeen());
   const timer = useRef<number | undefined>(undefined);
 
@@ -93,8 +95,8 @@ export function App() {
 
   const saveEdit = (v: EditValues) => {
     if (edit === "new") {
-      if (v.qty > 0) store.addToHome(home, list, { name: v.name, cat: v.cat, unit: v.unit }, fail, v.qty);
-      else store.addToList(home, list, { name: v.name, cat: v.cat, unit: v.unit }, fail);
+      if (v.qty > 0) store.addToHome(home, list, { name: v.name, cat: v.cat, unit: v.unit, want: v.want }, fail, v.qty);
+      else store.addToList(home, list, { name: v.name, cat: v.cat, unit: v.unit, want: v.want }, fail);
       say(`${v.name.trim()} added`);
     } else if (edit) { store.editItem(home, edit, v, fail); say("Saved"); }
     setEdit(null);
@@ -124,7 +126,7 @@ export function App() {
               onDec={(i) => { if (i.qty <= 1) say(`${i.name} added to your list`); store.changeQty(home, i, -1, fail); }}
               onOut={(i) => { store.ranOut(home, i, fail); undoable(i, `${i.name} ran out, added to your list`); }}
               onDelete={(i) => { store.removeItem(home, i, fail); undoable(i, `${i.name} deleted`); }}
-              onEdit={(i) => setEdit(i)} onAdd={() => setEdit("new")} />
+              onEdit={(i) => setEdit(i)} onAdd={() => setEdit("new")} onCheck={() => setChecking(true)} />
           : tab === "scan" ? <Scan items={list} resolve={resolve} onAdd={onScanAdd} onManual={() => setEdit("new")} />
           : <List items={list} sizes={sizes}
               onRemove={(i) => { store.removeFromList(home, i, fail); undoable(i, `${i.name} removed from your list`); }}
@@ -143,6 +145,9 @@ export function App() {
         onBack={getPrevHomeId() ? () => { const id = getPrevHomeId()!; setHomeId(id); setHome(id); setSharing(false); say("Back on your previous list"); } : undefined} />}
       {joinId && joinId !== home && <JoinSheet myCount={list.length} onJoin={join} onCancel={() => { setJoinId(null); clearHash(); }} />}
       {toast && <div class="toast" role="status"><span>{toast.msg}</span>{toast.undo && <button class="toast-undo" onClick={toast.undo}>Undo</button>}</div>}
+      {checking && <StockCheck items={list} sizes={sizes}
+        onAnswer={(i, s) => store.setStock(home, i, s, fail)}
+        onClose={(goList) => { setChecking(false); if (goList) setTab("list"); }} />}
       {tutorial && !(joinId && joinId !== home) && <Tutorial onDone={() => setTutorial(false)} />}
     </div>
   );
