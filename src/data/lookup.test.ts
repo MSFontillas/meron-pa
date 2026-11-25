@@ -23,6 +23,29 @@ describe("lookupBarcode", () => {
     expect(await lookupBarcode("12ab", reply("x", null) as typeof fetch)).toBeNull();
     expect(await lookupBarcode("4809012090124", (async () => { throw new Error("offline"); }) as typeof fetch)).toBeNull();
   });
+  it("asks all databases at once: a fast hit wins over a slow miss, and the rest are cancelled", async () => {
+    let aborted = 0;
+    const f = ((url: string, init?: RequestInit) => new Promise<Response>((res, rej) => {
+      init?.signal?.addEventListener("abort", () => { aborted++; rej(new Error("aborted")); });
+      const hit = url.includes("openproductsfacts");
+      setTimeout(() => res(hit ? new Response(JSON.stringify({ status: 1, product: { product_name: "Bleach" } }))
+        : new Response("{}", { status: 404 })), hit ? 50 : 2000);
+    })) as typeof fetch;
+    const t = performance.now();
+    expect((await lookupBarcode("4805678056788", f))?.name).toBe("Bleach");
+    expect(performance.now() - t).toBeLessThan(500);
+    expect(aborted).toBeGreaterThan(0);
+  });
+  it("an unknown product takes as long as the slowest database, not the sum; gives up after the time limit", async () => {
+    const slow = (ms: number) => (() => new Promise<Response>((res) => setTimeout(() => res(new Response("{}", { status: 404 })), ms))) as unknown as typeof fetch;
+    let t = performance.now();
+    expect(await lookupBarcode("4809012090124", slow(100))).toBeNull();
+    expect(performance.now() - t).toBeLessThan(400); // 4 databases one after another would be 400+
+    const hang = ((_u: string, init?: RequestInit) => new Promise<Response>((_res, rej) => init?.signal?.addEventListener("abort", () => rej(new Error("aborted"))))) as typeof fetch;
+    t = performance.now();
+    expect(await lookupBarcode("4809012090124", hang, 200)).toBeNull();
+    expect(performance.now() - t).toBeLessThan(600);
+  });
   it("tries UPC-A and EAN-13 spellings of the same code", () => {
     expect(codeVariants("012345678905")).toEqual(["012345678905", "0012345678905"]);
     expect(codeVariants("0012345678905")).toEqual(["0012345678905", "012345678905"]);

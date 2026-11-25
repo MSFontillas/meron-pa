@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { APP_NAME } from "./config";
 import { getHomeId, setHomeId, getPrevHomeId, newHomeId, shareLink, joinIdFromHash } from "./data/home";
 import * as store from "./data/store";
-import { lookupBarcode } from "./data/lookup";
+import { codeVariants, lookupBarcode } from "./data/lookup";
 import { toggleTheme } from "./theme";
-import { pickIcon, type Item } from "./data/types";
+import { pickIcon, type Item, type Product } from "./data/types";
 import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
 import { Scan, type ScanResult, type Where } from "./screens/Scan";
@@ -19,7 +19,8 @@ export function App() {
   const [home, setHome] = useState(() => getHomeId());
   const [items, setItems] = useState<Item[] | null>(null);
   const [isDark, setIsDark] = useState(() => document.documentElement.dataset.theme === "dark" || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches));
-  const [sizes, setSizes] = useState<Record<string, string>>({});
+  const [products, setProducts] = useState<Record<string, Product> | null>(null);
+  const sizes = useMemo(() => Object.fromEntries(Object.entries(products ?? {}).filter(([, p]) => p.size).map(([c, p]) => [c, p.size])), [products]);
   const [tab, setTab] = useState<Tab>("home");
   const [edit, setEdit] = useState<Item | "new" | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -46,7 +47,8 @@ export function App() {
   useEffect(() => {
     if (ready !== "ok") return;
     setItems(null);
-    const off = store.watchSizes(home, setSizes);
+    setProducts(null);
+    const off = store.watchProducts(home, setProducts);
     const offItems = store.watchItems(home, setItems, () => say("Couldn't load your list."));
     return () => { off(); offItems(); };
   }, [ready, home]);
@@ -76,7 +78,8 @@ export function App() {
   const title = tab === "home" ? "At Home" : tab === "scan" ? "Scan" : "Shopping List";
 
   const resolve = async (code: string): Promise<ScanResult> => {
-    const saved = await store.getSavedProduct(home, code);
+    // Named by this household before: answer from memory at once (network read only if not loaded yet).
+    const saved = products ? codeVariants(code).map((c) => products[c]).find(Boolean) ?? null : await store.getSavedProduct(home, code);
     if (saved) return { code, product: saved, source: "home" };
     const found = await lookupBarcode(code);
     return { code, product: found, source: found ? "db" : null };

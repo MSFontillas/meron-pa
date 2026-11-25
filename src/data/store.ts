@@ -176,11 +176,16 @@ export function saveProduct(home: string, code: string, p: Product, fail: Fail):
   }).catch(fail);
 }
 
-/** barcode -> size text for every product this home has named (shown next to items). */
-export function watchSizes(home: string, onSizes: (m: Record<string, string>) => void): () => void {
+/** Every product this home has named, by barcode: kept in memory so a scan finds it with no network wait. */
+export function watchProducts(home: string, onProducts: (m: Record<string, Product>) => void): () => void {
   return onSnapshot(collection(db, "homes", home, "products"), (snap) => {
-    const m: Record<string, string> = {};
-    snap.forEach((d) => { const s = d.data().size; if (typeof s === "string" && s) m[d.id] = normalizeSize(s); });
-    onSizes(m);
+    const m: Record<string, Product> = {};
+    snap.forEach((d) => {
+      const x = d.data();
+      if (typeof x.name !== "string") return;
+      const cat = (CATS as readonly string[]).includes(x.cat) ? (x.cat as Cat) : "Other";
+      m[d.id] = { name: x.name, cat, icon: typeof x.icon === "string" ? x.icon : "", size: typeof x.size === "string" ? normalizeSize(x.size) : "" };
+    });
+    onProducts(m);
   }, () => {});
 }
