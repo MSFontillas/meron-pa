@@ -65,6 +65,24 @@ describe("lookupBarcode", () => {
   it("picks an icon per product, else the category icon", () => {
     expect(pickIcon("Colgate toothpaste", "Bathroom")).toBe("🪥");
     expect(pickIcon("Mystery item", "Cleaning")).toBe("🧽");
+    expect(pickIcon("Mystery food", "Food & drinks")).toBe("🍽️");
+  });
+  it("does not match inside other words or next to a negator", () => {
+    expect(pickIcon("Diet cola, no sugar", "Food & drinks")).toBe("🍽️");
+    expect(pickIcon("Sugar-free gum", "Food & drinks")).toBe("🍽️");
+    expect(pickIcon("Sugar free candy", "Food & drinks")).toBe("🍪"); // sugar skipped, candy counts
+    expect(pickIcon("Zero salt crackers", "Food & drinks")).toBe("🍪");
+    expect(pickIcon("Walang asukal na juice", "Food & drinks")).toBe("🥤");
+    expect(pickIcon("Toilet cleaner", "Cleaning")).toBe("🧪"); // not "oil"
+    expect(pickIcon("Boiled peanuts", "Food & drinks")).toBe("🍽️"); // not "oil"
+    expect(pickIcon("Steak", "Food & drinks")).toBe("🍽️"); // not "tea"
+    expect(pickIcon("Sugarless candy", "Food & drinks")).toBe("🍪");
+  });
+  it("the earliest keyword is the product", () => {
+    expect(pickIcon("Coffee with sugar", "Food & drinks")).toBe("☕");
+    expect(pickIcon("Sugar 1kg", "Food & drinks")).toBe("🧂");
+    expect(pickIcon("Chicken noodle soup", "Food & drinks")).toBe("🍗");
+    expect(pickIcon("Head & Shoulders", "Bathroom")).toBe("🧴");
   });
 });
 

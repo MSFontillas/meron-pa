@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { pickIcon, type Item, type Product } from "../data/types";
+import { catClass, pickIcon, type Item, type Product } from "../data/types";
 import { findSame } from "../data/store";
 
 export interface ScanResult { code: string; product: Product | null; source: "home" | "db" | null }
@@ -99,7 +99,7 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
       {pending?.kind === "have" && p && (
         <div class="result" role="alertdialog" aria-labelledby="have-h">
           <div class="result-top">
-            <span class="pic" aria-hidden="true">{pickIcon(p.name, p.cat)}</span>
+            <span class={`pic ${catClass(p.cat)}`} aria-hidden="true">{pickIcon(p.name, p.cat)}</span>
             <div><h3 id="have-h">You still have {pending.qty} {p.name}</h3><p class="meta">Add it to your shopping list anyway?</p></div>
           </div>
           <div class="two">

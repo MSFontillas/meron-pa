@@ -2,7 +2,7 @@ export const CATS = ["Food & drinks", "Laundry", "Bathroom", "Cleaning", "Baby",
 export type Cat = (typeof CATS)[number];
 
 export const CAT_ICON: Record<Cat, string> = {
-  "Food & drinks": "🍚", Laundry: "🧺", Bathroom: "🧴", Cleaning: "🧽", Baby: "🍼", Other: "📦",
+  "Food & drinks": "🍽️", Laundry: "🧺", Bathroom: "🧴", Cleaning: "🧽", Baby: "🍼", Other: "📦",
 };
 
 /** One thing the household buys. qty = how many are at home; onList = needs buying. */
@@ -37,24 +37,44 @@ export function cleanName(s: string): string {
   return s.replace(/\s+/g, " ").trim().slice(0, LIMITS.name);
 }
 
-// Keyword -> emoji so each product gets its own icon; falls back to the category icon. First match wins.
-const ICONS: [RegExp, string][] = [
-  [/toothpaste|toothbrush|colgate|closeup/i, "🪥"], [/shampoo|conditioner|sunsilk|palmolive|head ?& ?shoulders|creamsilk/i, "🧴"],
-  [/soap|safeguard|dove|body wash|lifebuoy|kojie/i, "🧼"], [/tissue|toilet paper|napkin/i, "🧻"],
-  [/detergent|downy|fabric|surf\b|ariel|tide|breeze|labada|\bpowder/i, "🧺"], [/bleach|zonrox|disinfect|lysol|domex|toilet cleaner/i, "🧪"],
-  [/dishwash|joy\b|sponge|scrub/i, "🧽"], [/trash|garbage/i, "🗑️"], [/diaper|pampers|eq dry|huggies|wipes/i, "🍼"],
-  [/rice|bigas|jasmine/i, "🍚"], [/noodle|pancit|canton|lucky me|ramen|pasta|spaghetti/i, "🍜"], [/egg|itlog/i, "🥚"],
-  [/milk|gatas|alaska|bear brand|milo|nestogen/i, "🥛"], [/coffee|kape|nescafe|kopiko|great taste/i, "☕"], [/tea\b|lipton/i, "🍵"],
-  [/tuna|sardine|mackerel|corned|spam|luncheon|canned|ligo|555|century/i, "🥫"], [/soy|toyo|vinegar|suka|patis|ketchup|sauce|mayo|oyster/i, "🫙"],
-  [/oil|mantika|minola|baguio/i, "🫗"], [/sugar|asukal|salt|asin|flour|harina/i, "🧂"], [/bread|pandesal|tinapay|loaf/i, "🍞"],
-  [/biscuit|cracker|cookie|skyflakes|oreo|piattos|chips|nova|chippy|snack|candy|chocolate/i, "🍪"], [/juice|soda|coke|sprite|royal|pepsi|c2|water|mineral/i, "🥤"],
-  [/chicken|manok|pork|baboy|beef|baka|hotdog|tocino|longganisa|meat/i, "🍗"], [/fish|bangus|tilapia|isda|shrimp|hipon/i, "🐟"],
-  [/onion|sibuyas|garlic|bawang|tomato|kamatis|kangkong|vegetable|gulay|potato|patatas|carrot/i, "🥬"], [/banana|saging|mango|apple|orange|fruit|prutas/i, "🍌"],
+// Whole words -> emoji so each product gets its own icon; otherwise the category icon.
+// Only the earliest keyword in the name counts ("Coffee with sugar" is coffee), and a keyword next to a
+// negator ("no sugar", "sugar-free", "zero salt") is ignored.
+const ICONS: [string[], string][] = [
+  [["toothpaste", "toothbrush", "colgate", "closeup"], "🪥"], [["shampoo", "conditioner", "sunsilk", "palmolive", "head & shoulders", "creamsilk"], "🧴"],
+  [["soap", "safeguard", "dove", "body wash", "lifebuoy", "kojie"], "🧼"], [["tissue", "toilet paper", "napkin"], "🧻"],
+  [["detergent", "downy", "fabric", "surf", "ariel", "tide", "breeze", "labada", "powder"], "🧺"], [["bleach", "zonrox", "disinfect", "lysol", "domex", "toilet cleaner"], "🧪"],
+  [["dishwash", "joy", "sponge", "scrub"], "🧽"], [["trash", "garbage"], "🗑️"], [["diaper", "pampers", "eq dry", "huggies", "wipes"], "🍼"],
+  [["rice", "bigas", "jasmine"], "🍚"], [["noodle", "pancit", "canton", "lucky me", "ramen", "pasta", "spaghetti"], "🍜"], [["egg", "itlog"], "🥚"],
+  [["milk", "gatas", "alaska", "bear brand", "milo", "nestogen"], "🥛"], [["coffee", "kape", "nescafe", "kopiko", "great taste"], "☕"], [["tea", "lipton"], "🍵"],
+  [["tuna", "sardine", "mackerel", "corned", "spam", "luncheon", "canned", "ligo", "555", "century"], "🥫"], [["soy", "toyo", "vinegar", "suka", "patis", "ketchup", "sauce", "mayo", "oyster"], "🫙"],
+  [["oil", "mantika", "minola", "baguio"], "🫗"], [["sugar", "asukal", "salt", "asin", "flour", "harina"], "🧂"], [["bread", "pandesal", "tinapay", "loaf"], "🍞"],
+  [["biscuit", "cracker", "cookie", "skyflakes", "oreo", "piattos", "chips", "nova", "chippy", "snack", "candy", "chocolate"], "🍪"], [["juice", "soda", "coke", "sprite", "royal", "pepsi", "c2", "water", "mineral"], "🥤"],
+  [["chicken", "manok", "pork", "baboy", "beef", "baka", "hotdog", "tocino", "longganisa", "meat"], "🍗"], [["fish", "bangus", "tilapia", "isda", "shrimp", "hipon"], "🐟"],
+  [["onion", "sibuyas", "garlic", "bawang", "tomato", "kamatis", "kangkong", "vegetable", "gulay", "potato", "patatas", "carrot"], "🥬"], [["banana", "saging", "mango", "apple", "orange", "fruit", "prutas"], "🍌"],
 ];
 
+const wordRe = (w: string) => new RegExp(`(?<![\\p{L}\\d])${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ & /g, " ?& ?")}(?:s|es)?(?![\\p{L}\\d])`, "giu");
+const COMPILED = ICONS.map(([ws, icon]) => ({ icon, res: ws.map(wordRe) }));
+const NEG_BEFORE = /(?:^|[^\p{L}])(?:no|zero|non|without|walang|sans|less)[\s-]*$/iu;
+const NEG_AFTER = /^[\s-]*(?:free|less)(?![\p{L}])/iu;
+
 export function pickIcon(name: string, cat: Cat): string {
-  return ICONS.find(([re]) => re.test(name))?.[1] ?? CAT_ICON[cat];
+  let best: { at: number; icon: string } | null = null;
+  for (const { icon, res } of COMPILED) for (const re of res) {
+    re.lastIndex = 0;
+    for (const m of name.matchAll(re)) {
+      const at = m.index ?? 0;
+      if (NEG_BEFORE.test(name.slice(0, at)) || NEG_AFTER.test(name.slice(at + m[0].length))) continue;
+      if (!best || at < best.at) best = { at, icon };
+      break; // later matches of this word cannot be earlier
+    }
+  }
+  return best?.icon ?? CAT_ICON[cat];
 }
+
+/** CSS class that tints the icon square by category (colour is never the only cue: headings name the category). */
+export const catClass = (c: Cat) => "cat-" + c.split(/[ &]/)[0].toLowerCase();
 
 const SIZE_RE = /(?:(\d+)\s*[x×]\s*)?(\d+(?:[.,]\d+)?)\s*(kg|g|gr|grams?|ml|cl|l|lt|ltrs?|liters?|litres?|fl\.?\s*oz|oz)\b/gi;
 

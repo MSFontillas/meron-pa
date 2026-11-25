@@ -1,6 +1,6 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CATS, type Item } from "../data/types";
+import { CATS, catClass, type Item } from "../data/types";
 import { useDialog } from "./useDialog";
 
 export type Stock = { qty: number; onList: boolean };
@@ -43,7 +43,7 @@ export function StockCheck({ items, sizes, onAnswer, onClose, hint, closeLabel }
         <div class="sc">
           <p class="count" aria-live="polite">{idx + 1} of {todo.length}</p>
           <div class="sc-item">
-            <span class="sc-ic" aria-hidden="true">{it.icon}</span>
+            <span class={`sc-ic ${catClass(it.cat)}`} aria-hidden="true">{it.icon}</span>
             <h2 tabIndex={-1} ref={head}>{it.name}</h2>
             <p class="meta">{[it.barcode && sizes[it.barcode], `Last count: ${orig[it.id]}`, it.want ? `Usually keep ${it.want}` : ""].filter(Boolean).join(" · ")}</p>
           </div>

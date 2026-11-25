@@ -1,6 +1,7 @@
 :root {
   --bg: #FBF5E9; --surface: #FFFDF8; --ink: #2B2420; --muted: #685D53; --line: #EADFCC;
   --leaf: #237A41; --on-leaf: #FFFFFF; --leaf-soft: #E5EFD9;
+  --t-food: #FFF1C9; --t-laundry: #DCEBFA; --t-bathroom: #D9F1E6; --t-cleaning: #E8E0F7; --t-baby: #FADDE6; --t-other: #EFE9DD;
   --tomato: #C8432A; --on-tomato: #FFFFFF; --field-line: #8F8274; --butter: #E9B52A; --cam: #18201A; --cam-ink: #F2F6F2;
   --shadow: 0 10px 30px rgba(43, 36, 32, .14);
   --f-display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
@@ -10,10 +11,12 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #1B1426; --surface: #261C35; --ink: #F0EAF7; --muted: #B6AAC8; --line: #3B2F50;
   --leaf: #6BCB89; --on-leaf: #10201A; --leaf-soft: #2F2546; --tomato: #FF8A70; --on-tomato: #2A0E08; --field-line: #7A6E8C; --cam: #110C19;
+  --t-food: #4A3B12; --t-laundry: #1F3550; --t-bathroom: #1B4036; --t-cleaning: #3B2F5C; --t-baby: #54263A; --t-other: #3A3148;
   --shadow: 0 10px 30px rgba(0,0,0,.45); color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #1B1426; --surface: #261C35; --ink: #F0EAF7; --muted: #B6AAC8; --line: #3B2F50;
   --leaf: #6BCB89; --on-leaf: #10201A; --leaf-soft: #2F2546; --tomato: #FF8A70; --on-tomato: #2A0E08; --field-line: #7A6E8C; --cam: #110C19;
+  --t-food: #4A3B12; --t-laundry: #1F3550; --t-bathroom: #1B4036; --t-cleaning: #3B2F5C; --t-baby: #54263A; --t-other: #3A3148;
   --shadow: 0 10px 30px rgba(0,0,0,.45); color-scheme: dark }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
@@ -141,3 +144,7 @@ p { margin: 0 }
 .stepper { flex-shrink: 0 }
 .toast.sr { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; background: none }
 .frame-msg { padding: 24px }
+.cat-food { background: var(--t-food) !important } .cat-laundry { background: var(--t-laundry) !important } .cat-bathroom { background: var(--t-bathroom) !important }
+.cat-cleaning { background: var(--t-cleaning) !important } .cat-baby { background: var(--t-baby) !important } .cat-other { background: var(--t-other) !important }
+.check .emoji { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center }
+.sc-ic { width: 88px; height: 88px; border-radius: 28px; display: grid; place-items: center; line-height: 1 }

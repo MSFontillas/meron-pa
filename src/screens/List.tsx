@@ -1,4 +1,4 @@
-import { CATS, toBuy as buyCount, type Item } from "../data/types";
+import { CATS, catClass, toBuy as buyCount, type Item } from "../data/types";
 import { Swipe } from "./Swipe";
 
 interface Props { items: Item[]; sizes: Record<string, string>; onRemove: (i: Item) => void; onCheck?: () => void; onTick: (i: Item, v: boolean) => void; onPutAway: (b: Item[]) => void }
@@ -8,7 +8,7 @@ export function List({ items, sizes, onRemove, onTick, onPutAway, onCheck }: Pro
   const toBuy = list.filter((i) => !i.inBasket), got = list.filter((i) => i.inBasket), n = got.length;
   const row = (i: Item) => (
     <Swipe key={i.id} onRight={() => onRemove(i)} rightLabel="Remove ✕"><div class="check-row"><button class="check" role="checkbox" aria-checked={i.inBasket} data-item={i.name} onClick={() => onTick(i, !i.inBasket)}>
-      <span class="box" aria-hidden="true">{i.inBasket ? "✓" : ""}</span><span class="emoji" aria-hidden="true">{i.icon}</span><span class="lbl">{i.name}<small class="size">{[buyCount(i) ? `Buy ${buyCount(i)}` : "", i.barcode && sizes[i.barcode]].filter(Boolean).join(" · ")}</small></span>
+      <span class="box" aria-hidden="true">{i.inBasket ? "✓" : ""}</span><span class={`emoji ${catClass(i.cat)}`} aria-hidden="true">{i.icon}</span><span class="lbl">{i.name}<small class="size">{[buyCount(i) ? `Buy ${buyCount(i)}` : "", i.barcode && sizes[i.barcode]].filter(Boolean).join(" · ")}</small></span>
     </button><button class="rm" aria-label={`Remove ${i.name} from the list`} onClick={() => onRemove(i)}>✕</button></div></Swipe>
   );
   return (

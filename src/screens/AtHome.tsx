@@ -1,4 +1,4 @@
-import { CATS, type Item } from "../data/types";
+import { CATS, catClass, type Item } from "../data/types";
 import { Swipe } from "./Swipe";
 
 interface Props { items: Item[]; sizes: Record<string, string>; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onDelete: (i: Item) => void; onEdit: (i: Item) => void; onAdd?: () => void; onCheck?: () => void }
@@ -16,7 +16,7 @@ export function AtHome({ items, sizes, onInc, onDec, onOut, onDelete, onEdit, on
           {home.filter((i) => i.cat === c).map((i) => (
             <Swipe key={i.id} onRight={() => onOut(i)} rightLabel="🛒 Ran out" onLeft={() => onDelete(i)} leftLabel="Delete 🗑️">
             <div class="item" data-item={i.name}>
-              <span class="pic" aria-hidden="true">{i.icon}</span>
+              <span class={`pic ${catClass(i.cat)}`} aria-hidden="true">{i.icon}</span>
               <div class="item-main">
                 <button class="item-name" onClick={() => onEdit(i)}>{i.name}</button>
                 <small class="size">{[i.unit, i.barcode && sizes[i.barcode]].filter(Boolean).join(" · ")}</small>
