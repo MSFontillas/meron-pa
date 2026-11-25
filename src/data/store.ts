@@ -118,6 +118,21 @@ export function editItem(home: string, item: Item, ch: { name: string; cat: Cat;
   }).catch(fail);
 }
 
+/** Writes an item back exactly as it was (Undo). */
+export function restore(home: string, it: Item, fail: Fail): void {
+  const data: Record<string, unknown> = {
+    name: it.name, icon: it.icon.slice(0, LIMITS.icon), cat: it.cat, qty: it.qty, unit: it.unit.slice(0, LIMITS.unit),
+    onList: it.onList, inBasket: it.inBasket, ...stamp(),
+  };
+  if (it.barcode) data.barcode = it.barcode;
+  setDoc(itemRef(home, it.id), data).catch(fail);
+}
+
+/** Off the shopping list. Still stocked at home: keep it there; otherwise it is gone. */
+export function removeFromList(home: string, it: Item, fail: Fail): void {
+  (it.qty > 0 ? updateDoc(itemRef(home, it.id), { onList: false, inBasket: false, ...stamp() }) : deleteDoc(itemRef(home, it.id))).catch(fail);
+}
+
 export function removeItem(home: string, item: Item, fail: Fail): void {
   deleteDoc(itemRef(home, item.id)).catch(fail);
 }

@@ -1,8 +1,9 @@
 import { CATS, type Item } from "../data/types";
+import { Swipe } from "./Swipe";
 
-interface Props { items: Item[]; sizes: Record<string, string>; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onEdit: (i: Item) => void; onAdd: () => void }
+interface Props { items: Item[]; sizes: Record<string, string>; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onDelete: (i: Item) => void; onEdit: (i: Item) => void; onAdd: () => void }
 
-export function AtHome({ items, sizes, onInc, onDec, onOut, onEdit, onAdd }: Props) {
+export function AtHome({ items, sizes, onInc, onDec, onOut, onDelete, onEdit, onAdd }: Props) {
   const home = items.filter((i) => i.qty > 0);
   return (
     <>
@@ -12,12 +13,12 @@ export function AtHome({ items, sizes, onInc, onDec, onOut, onEdit, onAdd }: Pro
         <>
           <div class="group-h">{c}</div>
           {home.filter((i) => i.cat === c).map((i) => (
-            <div class="item" key={i.id} data-item={i.name}>
+            <Swipe key={i.id} onRight={() => onOut(i)} rightLabel="🛒 Ran out" onLeft={() => onDelete(i)} leftLabel="Delete 🗑️">
+            <div class="item" data-item={i.name}>
               <span class="pic" aria-hidden="true">{i.icon}</span>
               <div class="item-main">
                 <button class="item-name" onClick={() => onEdit(i)}>{i.name}</button>
                 <small class="size">{[i.unit, i.barcode && sizes[i.barcode]].filter(Boolean).join(" · ")}</small>
-                <button class="ranout" onClick={() => onOut(i)}>Ran out</button>
               </div>
               <div class="stepper">
                 <button onClick={() => onDec(i)} aria-label={`One less ${i.name}`}>−</button>
@@ -25,6 +26,7 @@ export function AtHome({ items, sizes, onInc, onDec, onOut, onEdit, onAdd }: Pro
                 <button onClick={() => onInc(i)} aria-label={`One more ${i.name}`}>+</button>
               </div>
             </div>
+            </Swipe>
           ))}
         </>
       ))}

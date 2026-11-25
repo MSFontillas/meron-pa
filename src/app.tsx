@@ -8,6 +8,7 @@ import { pickIcon, type Item } from "./data/types";
 import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
 import { Scan, type ScanResult } from "./screens/Scan";
+import { Tutorial, tutorialSeen } from "./screens/Tutorial";
 import { EditSheet, ShareSheet, JoinSheet, type EditValues } from "./screens/Sheets";
 
 type Tab = "home" | "scan" | "list";
@@ -22,10 +23,16 @@ export function App() {
   const [edit, setEdit] = useState<Item | "new" | null>(null);
   const [sharing, setSharing] = useState(false);
   const [joinId, setJoinId] = useState<string | null>(() => joinIdFromHash(location.hash));
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState<{ msg: string; undo?: () => void } | null>(null);
+  const [tutorial, setTutorial] = useState(() => !tutorialSeen());
   const timer = useRef<number | undefined>(undefined);
 
-  const say = (m: string) => { setToast(m); clearTimeout(timer.current); timer.current = window.setTimeout(() => setToast(""), 2400); };
+  const say = (msg: string, undo?: () => void) => {
+    setToast({ msg, undo }); clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setToast(null), undo ? 5000 : 2400);
+  };
+  // Every swipe can be taken back: the item is written back exactly as it was.
+  const undoable = (i: Item, msg: string) => say(msg, () => { store.restore(home, i, fail); setToast(null); });
   const fail = () => say("Couldn't save that change. Try again.");
 
   const boot = () => {
@@ -113,11 +120,12 @@ export function App() {
           : tab === "home" ? <AtHome items={list} sizes={sizes}
               onInc={(i) => store.changeQty(home, i, 1, fail)}
               onDec={(i) => { if (i.qty <= 1) say(`${i.name} added to your list`); store.changeQty(home, i, -1, fail); }}
-              onOut={(i) => { store.ranOut(home, i, fail); say(`${i.name} added to your list`); }}
+              onOut={(i) => { store.ranOut(home, i, fail); undoable(i, `${i.name} ran out, added to your list`); }}
+              onDelete={(i) => { store.removeItem(home, i, fail); undoable(i, `${i.name} deleted`); }}
               onEdit={(i) => setEdit(i)} onAdd={() => setEdit("new")} />
           : tab === "scan" ? <Scan resolve={resolve} onAdd={onScanAdd} onManual={() => setEdit("new")} />
           : <List items={list} sizes={sizes}
-              onAdd={(name, icon) => { store.addToList(home, list, { name, icon, cat: icon ? "Food & drinks" : "Other" }, fail); }}
+              onRemove={(i) => { store.removeFromList(home, i, fail); undoable(i, `${i.name} removed from your list`); }}
               onTick={(i, v) => store.setInBasket(home, i, v, fail)}
               onPutAway={(b) => { store.putAway(home, b, fail); say(`${b.length} ${b.length === 1 ? "item" : "items"} put away`); }} />}
       </main>
@@ -132,7 +140,8 @@ export function App() {
         onNewList={() => { const id = newHomeId(); setHomeId(id); setHome(id); setSharing(false); say("New empty list started"); }}
         onBack={getPrevHomeId() ? () => { const id = getPrevHomeId()!; setHomeId(id); setHome(id); setSharing(false); say("Back on your previous list"); } : undefined} />}
       {joinId && joinId !== home && <JoinSheet myCount={list.length} onJoin={join} onCancel={() => { setJoinId(null); clearHash(); }} />}
-      {toast && <div class="toast" role="status">{toast}</div>}
+      {toast && <div class="toast" role="status"><span>{toast.msg}</span>{toast.undo && <button class="toast-undo" onClick={toast.undo}>Undo</button>}</div>}
+      {tutorial && !(joinId && joinId !== home) && <Tutorial onDone={() => setTutorial(false)} />}
     </div>
   );
 }

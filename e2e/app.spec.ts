@@ -4,7 +4,18 @@ import { fakeCamera } from "./fakeCamera";
 const nav = (p: Page, name: string) => p.getByRole("navigation").getByRole("button", { name });
 const card = (p: Page, name: string) => p.locator(`.item[data-item="${name}"]`);
 
+const seen = (p: Page) => p.addInitScript(() => { try { localStorage.setItem("tutorialSeen", "1"); } catch { /* ignore */ } });
+
+/** Drags a row sideways with the mouse (pointer events), like a finger swipe. */
+async function swipe(page: Page, row: ReturnType<Page["locator"]>, dir: "left" | "right") {
+  const b = (await row.boundingBox())!;
+  const y = b.y + b.height / 2, x = b.x + b.width / 2, to = x + (dir === "right" ? 1 : -1) * b.width * 0.45;
+  await page.mouse.move(x, y); await page.mouse.down();
+  await page.mouse.move(to, y + 3, { steps: 8 }); await page.mouse.up();
+}
+
 async function open(page: Page) {
+  await seen(page);
   await page.addInitScript(fakeCamera);
   await page.route(/open(food|beauty|products)facts\.org/, (r) => {
     if (r.request().url().includes("4801234012342"))
@@ -29,13 +40,14 @@ test("add, count, run out, shop with undo, put away", async ({ page }) => {
   await expect(card(page, "Shampoo sachets").locator("output")).toHaveText(/^2/);
   await card(page, "Shampoo sachets").getByRole("button", { name: "One more Shampoo sachets" }).click();
   await expect(card(page, "Shampoo sachets").locator("output")).toHaveText(/^3/);
-  await card(page, "Shampoo sachets").getByRole("button", { name: "Ran out" }).click();
+  await swipe(page, card(page, "Shampoo sachets"), "right"); // ran out
   await expect(card(page, "Shampoo sachets")).toHaveCount(0);
+  await addByHand(page, "Kangkong", 1);
+  await swipe(page, card(page, "Kangkong"), "right");
 
   await nav(page, "List").click();
-  await expect(page.getByText("1 to buy")).toBeVisible();
-  await page.getByRole("button", { name: "🥬 Kangkong" }).click();
   await expect(page.getByText("2 to buy")).toBeVisible();
+  await expect(page.getByPlaceholder("Add an item…")).toHaveCount(0);
   const row = (n: string) => page.locator(`.check[data-item="${n}"]`);
   await row("Shampoo sachets").click();
   await row("Kangkong").click();
@@ -80,12 +92,13 @@ test("share link: a second phone joins and both see changes", async ({ browser }
   await a.getByRole("button", { name: "Close" }).click();
 
   const b = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  await seen(b);
   await b.goto(link);
   await b.getByRole("button", { name: "Join", exact: true }).click();
   await nav(b, "At Home").click();
   await expect(card(b, "Rice, 5 kg")).toBeVisible();
 
-  await card(b, "Rice, 5 kg").getByRole("button", { name: "Ran out" }).click();
+  await swipe(b, card(b, "Rice, 5 kg"), "right");
   await nav(a, "List").click();
   await expect(a.locator('.check[data-item="Rice, 5 kg"]')).toBeVisible();
 });
@@ -142,4 +155,44 @@ test("refuses to run inside another site's frame", async ({ page }) => {
   const f = page.frameLocator("iframe");
   await expect(f.getByText("Open Meron Pa? directly")).toBeVisible();
   await expect(f.getByRole("heading", { name: "At Home" })).toHaveCount(0);
+});
+
+test("swipe left deletes, Undo brings it back; vertical drags don't swipe", async ({ page }) => {
+  await open(page);
+  await addByHand(page, "Toyo", 3);
+  const row = card(page, "Toyo"), b = (await row.boundingBox())!;
+  await page.mouse.move(b.x + b.width / 2, b.y + 10); await page.mouse.down();
+  await page.mouse.move(b.x + b.width / 2 + 20, b.y + 200, { steps: 8 }); await page.mouse.up(); // mostly down = scroll
+  await expect(row).toBeVisible();
+
+  await swipe(page, row, "left");
+  await expect(row).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(card(page, "Toyo").locator("output")).toHaveText("3");
+});
+
+test("List: swipe right removes, Undo puts it back", async ({ page }) => {
+  await open(page);
+  await addByHand(page, "Bleach", 1);
+  await swipe(page, card(page, "Bleach"), "right");
+  await nav(page, "List").click();
+  const row = page.locator('.check[data-item="Bleach"]');
+  await swipe(page, row, "right");
+  await expect(row).toHaveCount(0);
+  await expect(page.getByRole("checkbox")).toHaveCount(0); // the swipe did not tick it
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(row).toBeVisible();
+  await expect(row).toHaveAttribute("aria-checked", "false");
+});
+
+test("tutorial shows on first open only", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("dialog")).toContainText("Scan what you buy");
+  await page.getByRole("button", { name: "Next" }).click();
+  await expect(page.getByRole("dialog")).toContainText("Swipe right when it ran out");
+  await page.getByRole("button", { name: "Skip" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "At Home" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
