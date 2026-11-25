@@ -332,7 +332,7 @@ test("screen reader tree: names, roles and states", async ({ page }) => {
   await page.getByRole("button", { name: /^Ubos na/ }).click();
   await page.getByRole("button", { name: "Go to my list" }).click();
   await expect(page.getByRole("checkbox", { name: "Toyo" })).toHaveAttribute("aria-checked", "false");
-  await expect(page.getByRole("status")).toHaveCount(0);
+  await expect(page.locator(".toast [role=status]")).toHaveCount(1); // one always-present live region
 });
 
 test("a long list scrolls; rows keep their full height (were squashed to fit the screen)", async ({ page }) => {
@@ -354,4 +354,28 @@ test("touch targets are at least 44px", async ({ page }) => {
   expect(small.filter((x) => x.t !== "Toyo")).toEqual([]);
   const tap = await page.locator(".item-name").evaluate((e) => { const r = getComputedStyle(e, "::after"); return parseFloat(r.height); }); // overlay grows the target
   expect(tap).toBeGreaterThanOrEqual(44);
+});
+
+test("keyboard: dialogs trap Tab, Escape closes, focus returns; toast is a live region", async ({ page }) => {
+  await open(page);
+  await addByHand(page, "Eggs", 6);
+  const live = page.locator('[role="status"]').filter({ hasNotText: /^\d+$/ });
+  await expect(page.locator(".toast")).toHaveCount(1); // present from the start, so the first message is announced
+  const stockBtn = page.getByRole("button", { name: "Check stock before shopping" });
+  await stockBtn.focus(); await page.keyboard.press("Enter");
+  const dlg = page.getByRole("dialog", { name: "Check stock" });
+  await expect(dlg).toBeVisible();
+  for (let i = 0; i < 14; i++) { await page.keyboard.press("Tab"); expect(await page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true); }
+  expect(await page.locator("main").evaluate((e) => e.hasAttribute("inert"))).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(dlg).toHaveCount(0);
+  await expect(stockBtn).toBeFocused();
+
+  await page.getByRole("button", { name: "Share list" }).click();
+  await expect(page.getByRole("dialog", { name: "Share this list" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Share list" })).toBeFocused();
+  await page.getByRole("button", { name: "One more Eggs" }).click();
+  void live;
 });

@@ -110,16 +110,19 @@ export function App() {
     say("You're now on the shared list");
   };
 
+  // Behind a dialog nothing can be reached by keyboard or screen reader.
+  const modal = !!(edit || sharing || checking || (joinId && joinId !== home) || tutorial);
+  const bg = modal ? { inert: true } : {};
   return (
     <div class="app">
-      <header class="top">
+      <header class="top" {...bg}>
         <h1>{title}</h1>
         <div class="top-row">
           <button class="theme-btn" aria-label="Switch light or dark mode" onClick={() => setIsDark(toggleTheme())}>{isDark ? "☀️" : "🌙"}</button>
           <button class="top-btn" onClick={() => setSharing(true)}>Share list</button>
         </div>
       </header>
-      <main class={tab === "scan" ? "view scan-view" : "view"}>
+      <main class={tab === "scan" ? "view scan-view" : "view"} {...bg}>
         {items === null ? <p class="count">Loading…</p>
           : tab === "home" ? <AtHome items={list} sizes={sizes}
               onInc={(i) => store.changeQty(home, i, 1, fail)}
@@ -133,7 +136,7 @@ export function App() {
               onTick={(i, v) => store.setInBasket(home, i, v, fail)}
               onPutAway={(b) => { store.putAway(home, b, fail); say(`${b.length} ${b.length === 1 ? "item" : "items"} put away`); }} />}
       </main>
-      <nav class="nav" aria-label="Tabs">
+      <nav class="nav" aria-label="Tabs" {...bg}>
         <button class="tab" aria-current={tab === "home" ? "page" : undefined} onClick={() => setTab("home")}><span class="ic" aria-hidden="true">🏠</span>At Home</button>
         <button class="tab scan" aria-current={tab === "scan" ? "page" : undefined} onClick={() => setTab("scan")}><span class="ic" aria-hidden="true">▥</span>Scan</button>
         <button class="tab" aria-current={tab === "list" ? "page" : undefined} onClick={() => setTab("list")}><span class="ic" aria-hidden="true">🛒</span>List{toBuy > 0 && <span class="dot">{toBuy}</span>}</button>
@@ -144,7 +147,9 @@ export function App() {
         onNewList={() => { const id = newHomeId(); setHomeId(id); setHome(id); setSharing(false); say("New empty list started"); }}
         onBack={getPrevHomeId() ? () => { const id = getPrevHomeId()!; setHomeId(id); setHome(id); setSharing(false); say("Back on your previous list"); } : undefined} />}
       {joinId && joinId !== home && <JoinSheet myCount={list.length} onJoin={join} onCancel={() => { setJoinId(null); clearHash(); }} />}
-      {toast && <div class="toast" role="status"><span>{toast.msg}</span>{toast.undo && <button class="toast-undo" onClick={toast.undo}>Undo</button>}</div>}
+      <div class={toast ? "toast" : "toast sr"}>
+        <span role="status">{toast?.msg}</span>{toast?.undo && <button class="toast-undo" onClick={toast.undo}>Undo</button>}
+      </div>
       {checking && <StockCheck items={list} sizes={sizes}
         onAnswer={(i, s) => store.setStock(home, i, s, fail)}
         onClose={(goList) => { setChecking(false); if (goList) setTab("list"); }} />}

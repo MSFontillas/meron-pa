@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { CATS, type Item } from "../data/types";
+import { useDialog } from "./useDialog";
 
 export type Stock = { qty: number; onList: boolean };
 interface Props {
@@ -22,6 +23,7 @@ export function StockCheck({ items, sizes, onAnswer, onClose, hint, closeLabel }
   const it = todo[idx];
   const [n, setN] = useState(it ? orig[it.id] : 0);
   const head = useRef<HTMLHeadingElement>(null);
+  const dlg = useDialog(() => onClose(false));
   useEffect(() => { if (it) setN(orig[it.id]); head.current?.focus(); }, [idx]); // screen readers hear the next item
 
   const answer = (s: Stock) => { onAnswer(it, s); setAnswers({ ...answers, [it.id]: s }); setIdx(idx + 1); };
@@ -29,7 +31,7 @@ export function StockCheck({ items, sizes, onAnswer, onClose, hint, closeLabel }
   const below = !!it?.want && n < it.want;
 
   return (
-    <div class="tut" role="dialog" aria-modal="true" aria-labelledby="sc-h">
+    <div class="tut" role="dialog" aria-modal="true" aria-labelledby="sc-h" tabIndex={-1} ref={dlg.ref as never}>
       <header class="top">
         <h1 id="sc-h">Check stock</h1>
         <button class="top-btn" onClick={() => onClose(false)}>{closeLabel ?? (it ? "Stop" : "Close")}</button>
@@ -54,9 +56,9 @@ export function StockCheck({ items, sizes, onAnswer, onClose, hint, closeLabel }
             </div>
           </div>
           <div class="sc-btns">
-            <button class="sc-out" onClick={() => answer({ qty: 0, onList: true })}>Ubos na <small>None left · add to list</small></button>
-            <button class="sc-low" onClick={() => answer({ qty: n, onList: true })}>Kaunti na <small>Running low · add to list</small></button>
-            <button class="sc-ok" onClick={() => answer({ qty: n, onList: below })}>Meron pa <small>{below ? `Below your usual ${it.want} · add to list` : "Enough for now"}</small></button>
+            <button class="sc-out" onClick={() => answer({ qty: 0, onList: true })}><span lang="fil">Ubos na</span> <small>None left · add to list</small></button>
+            <button class="sc-low" onClick={() => answer({ qty: n, onList: true })}><span lang="fil">Kaunti na</span> <small>Running low · add to list</small></button>
+            <button class="sc-ok" onClick={() => answer({ qty: n, onList: below })}><span lang="fil">Meron pa</span> <small>{below ? `Below your usual ${it.want} · add to list` : "Enough for now"}</small></button>
           </div>
           {idx > 0 && <button class="link" onClick={() => setIdx(idx - 1)}>Back</button>}
         </div>

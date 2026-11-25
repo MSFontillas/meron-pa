@@ -3,6 +3,7 @@ import type { Item } from "../data/types";
 import { AtHome } from "./AtHome";
 import { List } from "./List";
 import { StockCheck } from "./StockCheck";
+import { useDialog } from "./useDialog";
 
 const KEY = "tutorialSeen";
 export function tutorialSeen(): boolean { try { return localStorage.getItem(KEY) === "1"; } catch { return true; } }
@@ -40,6 +41,7 @@ export function Tutorial({ onDone }: { onDone: () => void }) {
     onRemove={(i) => (i.qty > 0 ? change(i.id, { onList: false, inBasket: false }) : drop(i))}
     onPutAway={(b) => { b.forEach((i) => change(i.id, { onList: false, inBasket: false, qty: i.qty + 1 })); at(5, true); }} />;
 
+  const dlg = useDialog(done);
   const tip = <p class="tut-hint" role="status"><small>Practice {step + 1} of 6 · nothing here is saved</small>{HINTS[step]}</p>;
   if (step === 0) return (
     <div role="dialog" aria-modal="true" aria-label="Practice">
@@ -48,7 +50,7 @@ export function Tutorial({ onDone }: { onDone: () => void }) {
     </div>
   );
   return (
-    <div class="tut" role="dialog" aria-modal="true" aria-label="Practice">
+    <div class="tut" role="dialog" aria-modal="true" aria-label="Practice" tabIndex={-1} ref={dlg.ref as never}>
       <header class="top">
         <h1>{step >= 4 ? "Shopping List" : "At Home"}</h1>
         <button class="top-btn" onClick={done}>Skip</button>

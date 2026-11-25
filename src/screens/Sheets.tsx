@@ -1,16 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 
-/** Dialog behaviour: focus moves in on open, Escape closes (the backdrop tap is a mouse/touch extra). */
-function useDialog(onClose?: () => void) {
-  const ref = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const back = document.activeElement as HTMLElement | null;
-    if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
-    return () => back?.focus?.(); // focus returns to the button that opened it
-  }, []);
-  const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape" && onClose) { e.stopPropagation(); onClose(); } };
-  return { ref, onKeyDown };
-}
+import { useDialog } from "./useDialog";
 import qrcode from "qrcode-generator";
 import { CATS, type Cat, type Item } from "../data/types";
 
@@ -26,7 +16,7 @@ export function EditSheet({ item, onSave, onRemove, onClose }: {
   };
   const dlg = useDialog(onClose);
   return (
-    <div class="sheet-bg" role="dialog" aria-modal="true" aria-labelledby="sheet-h" tabIndex={-1} ref={dlg.ref as never} onClick={(e) => e.target === e.currentTarget && onClose()} onKeyDown={dlg.onKeyDown}>
+    <div class="sheet-bg" role="dialog" aria-modal="true" aria-labelledby="sheet-h" tabIndex={-1} ref={dlg.ref as never} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <form class="sheet" onSubmit={(e) => { e.preventDefault(); if (v.name.trim()) onSave(v); }}>
         <h2 id="sheet-h">{item ? "Edit item" : "Add item"}</h2>
         <div class="field"><label for="f-name">Name</label><input id="f-name" value={v.name} onInput={set("name")} maxLength={40} required autoFocus={!item} /></div>
@@ -58,7 +48,7 @@ export function ShareSheet({ link, onClose, onNewList, onBack }: { link: string;
   };
   const dlg = useDialog(onClose);
   return (
-    <div class="sheet-bg" role="dialog" aria-modal="true" aria-labelledby="share-h" tabIndex={-1} ref={dlg.ref as never} onClick={(e) => e.target === e.currentTarget && onClose()} onKeyDown={dlg.onKeyDown}>
+    <div class="sheet-bg" role="dialog" aria-modal="true" aria-labelledby="share-h" tabIndex={-1} ref={dlg.ref as never} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div class="sheet">
         <h2 id="share-h">Share this list</h2>
         <p class="hint">Anyone with this link can see and change your list, like a spare house key. Share it only with people at home. No sign-up needed.</p>
