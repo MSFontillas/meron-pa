@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -11,7 +11,7 @@ export function useDialog(onClose?: () => void) {
   const ref = useRef<HTMLElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
-  useEffect(() => {
+  useLayoutEffect(() => { // before paint, so focus and key handling are in place as soon as the dialog shows
     const back = lastFocus;
     if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
     const onKey = (e: KeyboardEvent) => {

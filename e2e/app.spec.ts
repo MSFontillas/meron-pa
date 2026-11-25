@@ -362,7 +362,8 @@ test("keyboard: dialogs trap Tab, Escape closes, focus returns; toast is a live 
   const live = page.locator('[role="status"]').filter({ hasNotText: /^\d+$/ });
   await expect(page.locator(".toast")).toHaveCount(1); // present from the start, so the first message is announced
   const stockBtn = page.getByRole("button", { name: "Check stock before shopping" });
-  await stockBtn.focus(); await page.keyboard.press("Enter");
+  await page.waitForTimeout(150); // the closed edit sheet hands focus back to its opener first
+  await stockBtn.focus(); await expect(stockBtn).toBeFocused(); await page.keyboard.press("Enter");
   const dlg = page.getByRole("dialog", { name: "Check stock" });
   await expect(dlg).toBeVisible();
   for (let i = 0; i < 14; i++) { await page.keyboard.press("Tab"); expect(await page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true); }
