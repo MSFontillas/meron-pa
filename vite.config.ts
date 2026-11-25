@@ -2,6 +2,24 @@ import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+// GitHub Pages cannot send headers, so the policy goes in a <meta> tag (built pages only; the dev server and tests are untouched).
+// Everything the app talks to is listed here: Firebase, reCAPTCHA Enterprise (App Check) and the Open * Facts product databases.
+const csp = [
+  "default-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval' https://www.google.com https://www.gstatic.com",
+  "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com https://recaptcha.google.com https://world.openfoodfacts.org https://world.openbeautyfacts.org https://world.openproductsfacts.org https://world.openpetfoodfacts.org",
+  "frame-src https://www.google.com https://recaptcha.google.com",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "style-src 'self'",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join("; ");
+const cspPlugin = { name: "csp-meta", apply: "build" as const, transformIndexHtml: () => [{ tag: "meta", attrs: { "http-equiv": "Content-Security-Policy", content: csp }, injectTo: "head-prepend" as const }] };
+
 // BASE_PATH is "/<repo-name>/" on GitHub Pages; "/" locally.
 const base = process.env.BASE_PATH || "/";
 
@@ -9,6 +27,7 @@ export default defineConfig({
   base,
   plugins: [
     preact(),
+    cspPlugin,
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["icon.svg"],

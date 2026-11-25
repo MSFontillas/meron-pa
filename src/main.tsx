@@ -6,5 +6,5 @@ initTheme();
 
 const root = document.getElementById("app")!;
 // Refuse to run inside another site's frame, so nobody can trick taps (clickjacking).
-if (window.top !== window.self) root.innerHTML = '<p style="padding:24px">Open Meron Pa? directly: <a href="." target="_top">open the app</a></p>';
+if (window.top !== window.self) root.innerHTML = '<p class="frame-msg">Open Meron Pa? directly: <a href="." target="_top">open the app</a></p>';
 else render(<App />, root);

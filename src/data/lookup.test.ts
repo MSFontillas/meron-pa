@@ -34,6 +34,11 @@ describe("lookupBarcode", () => {
     expect(normalizeSize("6 x 55 g")).toBe("6 x 55 g");
     expect(normalizeSize("12 oz")).toBe("12 oz");
   });
+  it("is not slowed down by a hostile 200 KB size string from a crowd-edited database", () => {
+    const t = performance.now();
+    normalizeSize("1".repeat(200_000));
+    expect(performance.now() - t).toBeLessThan(100);
+  });
   it("picks an icon per product, else the category icon", () => {
     expect(pickIcon("Colgate toothpaste", "Bathroom")).toBe("🪥");
     expect(pickIcon("Mystery item", "Cleaning")).toBe("🧽");

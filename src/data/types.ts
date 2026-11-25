@@ -60,6 +60,7 @@ const SIZE_RE = /(?:(\d+)\s*[x×]\s*)?(\d+(?:[.,]\d+)?)\s*(kg|g|gr|grams?|ml|cl|
 
 /** Picks ONE size from text like "500 ml (16.9 fl oz)": grams (g, kg) first, then liters (ml, L), then oz. */
 export function normalizeSize(raw: string): string {
+  raw = raw.slice(0, 100); // the regex is quadratic on long digit runs; the text comes from crowd-edited databases
   const found: { rank: number; text: string }[] = [];
   for (const m of raw.matchAll(SIZE_RE)) {
     const u = m[3].toLowerCase().replace(/\s+/g, "");

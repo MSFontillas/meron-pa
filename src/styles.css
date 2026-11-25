@@ -140,3 +140,4 @@ p { margin: 0 }
 .top-row { flex-wrap: wrap; justify-content: flex-end }
 .stepper { flex-shrink: 0 }
 .toast.sr { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; background: none }
+.frame-msg { padding: 24px }
