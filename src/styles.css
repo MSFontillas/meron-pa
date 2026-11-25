@@ -99,11 +99,10 @@ p { margin: 0 }
 .swipe-bg.left { background: var(--tomato); justify-content: flex-end }
 .toast { display: flex; align-items: center; justify-content: center; gap: 12px }
 .toast-undo { border: 0; background: var(--leaf); color: var(--on-leaf); border-radius: 12px; padding: 8px 14px; font-weight: 700; font-size: 16px; min-height: 40px; flex-shrink: 0 }
-.tut-bg { align-items: center; padding: 18px; z-index: 20 }
-.tut { background: var(--surface); color: var(--ink); width: min(420px, 100%); border-radius: 28px; padding: 28px 22px 18px; display: grid; gap: 12px; text-align: center; box-shadow: var(--shadow) }
-.tut-ic { font-size: 52px; line-height: 1 }
-.tut h2 { font-family: var(--f-display); font-size: 26px; margin: 0 }
-.tut p { margin: 0; font-size: 18px; color: var(--muted) }
-.tut-dots { display: flex; gap: 8px; justify-content: center; margin: 4px 0 }
-.tut-dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--line) }
-.tut-dots span.on { background: var(--leaf) }
+.tut { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; padding-top: env(safe-area-inset-top, 0px) }
+.tut-hint { margin: 4px 18px 0; background: var(--leaf); color: var(--on-leaf); border-radius: 18px; padding: 12px 16px; font-weight: 700; font-size: 18px; display: grid; gap: 2px }
+.tut-hint small { font-weight: 400; font-size: 13px; opacity: .85 }
+.tut-end { flex: 1; display: grid; align-content: center; gap: 14px; padding: 24px; text-align: center }
+.tut-end span { font-size: 56px }
+.tut-end h2 { font-family: var(--f-display); font-size: 28px; margin: 0 }
+.tut-end p { margin: 0; font-size: 18px; color: var(--muted) }

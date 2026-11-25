@@ -1,7 +1,7 @@
 import { CATS, type Item } from "../data/types";
 import { Swipe } from "./Swipe";
 
-interface Props { items: Item[]; sizes: Record<string, string>; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onDelete: (i: Item) => void; onEdit: (i: Item) => void; onAdd: () => void }
+interface Props { items: Item[]; sizes: Record<string, string>; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onDelete: (i: Item) => void; onEdit: (i: Item) => void; onAdd?: () => void }
 
 export function AtHome({ items, sizes, onInc, onDec, onOut, onDelete, onEdit, onAdd }: Props) {
   const home = items.filter((i) => i.qty > 0);
@@ -30,7 +30,7 @@ export function AtHome({ items, sizes, onInc, onDec, onOut, onDelete, onEdit, on
           ))}
         </>
       ))}
-      <button class="link" onClick={onAdd}>Add something by hand</button>
+      {onAdd && <button class="link" onClick={onAdd}>Add something by hand</button>}
     </>
   );
 }

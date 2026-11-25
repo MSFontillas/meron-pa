@@ -185,14 +185,37 @@ test("List: swipe right removes, Undo puts it back", async ({ page }) => {
   await expect(row).toHaveAttribute("aria-checked", "false");
 });
 
-test("tutorial shows on first open only", async ({ page }) => {
+test("practice demo on first open: every step, nothing saved, not shown again", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("dialog")).toContainText("Scan what you buy");
-  await page.getByRole("button", { name: "Next" }).click();
-  await expect(page.getByRole("dialog")).toContainText("Swipe right when it ran out");
-  await page.getByRole("button", { name: "Skip" }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const demo = page.getByRole("dialog", { name: "Practice" });
+  const row = (n: string) => demo.locator(`.item[data-item="${n}"]`);
+  await expect(demo).toContainText("Tap + on Eggs");
+  await swipe(page, row("Rice"), "right"); // wrong move: does not advance
+  await expect(demo).toContainText("Tap + on Eggs");
+  await row("Eggs").getByRole("button", { name: "One more Eggs" }).click();
+  await swipe(page, row("Toyo"), "right");
+  await expect(demo).toContainText("Swipe Rice to the left");
+  await page.reload(); // still not finished: shows again from the start
+  await expect(demo).toContainText("Tap + on Eggs");
+  await row("Eggs").getByRole("button", { name: "One more Eggs" }).click();
+  await swipe(page, row("Toyo"), "right");
+  await swipe(page, row("Rice"), "left");
+  await expect(row("Rice")).toHaveCount(0);
+  await demo.getByRole("button", { name: "Undo" }).click();
+  await expect(row("Rice")).toBeVisible();
+  await expect(demo).toContainText("tap Toyo to put it in your basket");
+  await demo.locator('.check[data-item="Toyo"]').click();
+  await demo.getByRole("button", { name: "Put 1 item away" }).click();
+  await demo.getByRole("button", { name: "Start using Meron Pa?" }).click();
+  await expect(demo).toHaveCount(0);
+  await expect(page.getByText("Nothing here yet")).toBeVisible(); // practice items were not saved
   await page.reload();
   await expect(page.getByRole("heading", { name: "At Home" })).toBeVisible();
+  await expect(demo).toHaveCount(0);
+});
+
+test("practice demo can be skipped", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("dialog", { name: "Practice" }).getByRole("button", { name: "Skip" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
