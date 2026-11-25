@@ -7,7 +7,7 @@ import {
 } from "firebase/firestore";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { appCheckKey, firebaseConfig, useEmulator } from "../config";
-import { CATS, CAT_ICON, LIMITS, cleanName, type Cat, type Item, type Product } from "./types";
+import { CATS, LIMITS, cleanName, normalizeSize, pickIcon, type Cat, type Item, type Product } from "./types";
 
 let db: Firestore;
 let auth: Auth;
@@ -37,7 +37,7 @@ function toItem(id: string, d: Record<string, unknown>): Item | null {
   const cat = (CATS as readonly string[]).includes(d.cat as string) ? (d.cat as Cat) : "Other";
   return {
     id, name: d.name, cat, qty: d.qty,
-    icon: typeof d.icon === "string" && d.icon ? d.icon : CAT_ICON[cat],
+    icon: pickIcon(d.name, cat), // derived, so old items match the new icon set
     unit: typeof d.unit === "string" ? d.unit : "",
     onList: d.onList === true, inBasket: d.inBasket === true,
     barcode: typeof d.barcode === "string" ? d.barcode : undefined,
@@ -66,7 +66,7 @@ export interface NewThing { name: string; icon?: string; cat: Cat; unit?: string
 
 function newDoc(t: NewThing, qty: number, onList: boolean) {
   const data: Record<string, unknown> = {
-    name: cleanName(t.name), icon: (t.icon || CAT_ICON[t.cat]).slice(0, LIMITS.icon), cat: t.cat,
+    name: cleanName(t.name), icon: (t.icon || pickIcon(t.name, t.cat)).slice(0, LIMITS.icon), cat: t.cat,
     qty, unit: (t.unit || "").slice(0, LIMITS.unit), onList, inBasket: false, ...stamp(),
   };
   if (t.barcode) data.barcode = t.barcode;
@@ -114,7 +114,7 @@ export function editItem(home: string, item: Item, ch: { name: string; cat: Cat;
   updateDoc(itemRef(home, item.id), {
     name: cleanName(ch.name) || item.name, cat: ch.cat, qty, unit: ch.unit.slice(0, LIMITS.unit),
     onList: qty === 0 ? true : item.onList, // nothing left at home: it goes on the list
-    icon: item.cat === ch.cat ? item.icon : CAT_ICON[ch.cat], ...stamp(),
+    icon: pickIcon(ch.name, ch.cat), ...stamp(),
   }).catch(fail);
 }
 
@@ -148,4 +148,13 @@ export function saveProduct(home: string, code: string, p: Product, fail: Fail):
   setDoc(doc(db, "homes", home, "products", code), {
     name: cleanName(p.name), icon: p.icon.slice(0, LIMITS.icon), cat: p.cat, size: p.size.slice(0, LIMITS.size),
   }).catch(fail);
+}
+
+/** barcode -> size text for every product this home has named (shown next to items). */
+export function watchSizes(home: string, onSizes: (m: Record<string, string>) => void): () => void {
+  return onSnapshot(collection(db, "homes", home, "products"), (snap) => {
+    const m: Record<string, string> = {};
+    snap.forEach((d) => { const s = d.data().size; if (typeof s === "string" && s) m[d.id] = normalizeSize(s); });
+    onSizes(m);
+  }, () => {});
 }

@@ -1,8 +1,8 @@
 import { CATS, type Item } from "../data/types";
 
-interface Props { items: Item[]; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onEdit: (i: Item) => void; onAdd: () => void }
+interface Props { items: Item[]; sizes: Record<string, string>; onInc: (i: Item) => void; onDec: (i: Item) => void; onOut: (i: Item) => void; onEdit: (i: Item) => void; onAdd: () => void }
 
-export function AtHome({ items, onInc, onDec, onOut, onEdit, onAdd }: Props) {
+export function AtHome({ items, sizes, onInc, onDec, onOut, onEdit, onAdd }: Props) {
   const home = items.filter((i) => i.qty > 0);
   return (
     <>
@@ -14,7 +14,7 @@ export function AtHome({ items, onInc, onDec, onOut, onEdit, onAdd }: Props) {
           {home.filter((i) => i.cat === c).map((i) => (
             <div class="item" key={i.id} data-item={i.name}>
               <span class="pic" aria-hidden="true">{i.icon}</span>
-              <button class="item-name" onClick={() => onEdit(i)}>{i.name}</button>
+              <button class="item-name" onClick={() => onEdit(i)}>{i.name}{i.barcode && sizes[i.barcode] && <small class="size">{sizes[i.barcode]}</small>}</button>
               <div class="item-actions">
                 <div class="stepper">
                   <button onClick={() => onDec(i)} aria-label={`One less ${i.name}`}>−</button>

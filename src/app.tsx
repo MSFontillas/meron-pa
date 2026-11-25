@@ -3,7 +3,7 @@ import { APP_NAME } from "./config";
 import { getHomeId, setHomeId, getPrevHomeId, newHomeId, shareLink, joinIdFromHash } from "./data/home";
 import * as store from "./data/store";
 import { lookupBarcode } from "./data/lookup";
-import { CAT_ICON, type Item } from "./data/types";
+import { pickIcon, type Item } from "./data/types";
 import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
 import { Scan, type ScanResult } from "./screens/Scan";
@@ -15,6 +15,7 @@ export function App() {
   const [ready, setReady] = useState<"loading" | "ok" | "offline">("loading");
   const [home, setHome] = useState(() => getHomeId());
   const [items, setItems] = useState<Item[] | null>(null);
+  const [sizes, setSizes] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<Tab>("home");
   const [edit, setEdit] = useState<Item | "new" | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -34,7 +35,9 @@ export function App() {
   useEffect(() => {
     if (ready !== "ok") return;
     setItems(null);
-    return store.watchItems(home, setItems, () => say("Couldn't load your list."));
+    const off = store.watchSizes(home, setSizes);
+    const offItems = store.watchItems(home, setItems, () => say("Couldn't load your list."));
+    return () => { off(); offItems(); };
   }, [ready, home]);
 
   useEffect(() => {
@@ -70,7 +73,7 @@ export function App() {
 
   const onScanAdd = (r: ScanResult, name: string, where: "home" | "list") => {
     const cat = r.product?.cat ?? "Other";
-    const icon = r.product?.icon ?? CAT_ICON[cat];
+    const icon = pickIcon(name, cat);
     if (r.source !== "home") store.saveProduct(home, r.code, { name, cat, icon, size: r.product?.size ?? "" }, fail);
     const t = { name, cat, icon, barcode: r.code };
     if (where === "home") { store.addToHome(home, list, t, fail); say(`${name} added to At Home`); }
@@ -102,13 +105,13 @@ export function App() {
       </header>
       <main class="view">
         {items === null ? <p class="count">Loading…</p>
-          : tab === "home" ? <AtHome items={list}
+          : tab === "home" ? <AtHome items={list} sizes={sizes}
               onInc={(i) => store.changeQty(home, i, 1, fail)}
               onDec={(i) => { if (i.qty <= 1) say(`${i.name} added to your list`); store.changeQty(home, i, -1, fail); }}
               onOut={(i) => { store.ranOut(home, i, fail); say(`${i.name} added to your list`); }}
               onEdit={(i) => setEdit(i)} onAdd={() => setEdit("new")} />
           : tab === "scan" ? <Scan resolve={resolve} onAdd={onScanAdd} onManual={() => setEdit("new")} />
-          : <List items={list}
+          : <List items={list} sizes={sizes}
               onAdd={(name, icon) => { store.addToList(home, list, { name, icon, cat: icon ? "Food & drinks" : "Other" }, fail); }}
               onTick={(i, v) => store.setInBasket(home, i, v, fail)}
               onPutAway={(b) => { store.putAway(home, b, fail); say(`${b.length} ${b.length === 1 ? "item" : "items"} put away`); }} />}

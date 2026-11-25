@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { Product } from "../data/types";
+import { pickIcon, type Product } from "../data/types";
 
 export interface ScanResult { code: string; product: Product | null; source: "home" | "db" | null }
 interface Props {
@@ -18,7 +18,7 @@ export function Scan({ resolve, onAdd, onManual }: Props) {
 
   const alive = useRef(true);
   const stop = () => { stopRef.current?.(); stopRef.current = null; };
-  useEffect(() => () => { alive.current = false; stop(); }, []);
+  useEffect(() => { void start(); return () => { alive.current = false; stop(); }; }, []); // camera opens on its own
 
   async function start() {
     setRes(null); setName(""); setState("scanning");
@@ -38,7 +38,7 @@ export function Scan({ resolve, onAdd, onManual }: Props) {
     }
   }
 
-  const add = (where: "home" | "list") => { if (res && name.trim()) { onAdd(res, name, where); setRes(null); setState("idle"); } };
+  const add = (where: "home" | "list") => { if (res && name.trim()) { onAdd(res, name, where); void start(); } };
   return (
     <>
       <div class="cam">
@@ -49,7 +49,7 @@ export function Scan({ resolve, onAdd, onManual }: Props) {
       {res && state === "result" ? (
         <div class="result">
           <div class="result-top">
-            <span class="pic" aria-hidden="true">{res.product?.icon ?? "📦"}</span>
+            <span class="pic" aria-hidden="true">{res.product ? pickIcon(res.product.name, res.product.cat) : "📦"}</span>
             <div>
               {res.product ? <h3>{res.product.name}</h3> : <h3>New product</h3>}
               <p class="meta">{res.product ? `${res.product.size ? res.product.size + " · " : ""}${res.source === "home" ? "Named by your home before" : "Found in a product database"}` : "Not in any database yet. Type its name once; next time it's found instantly."}</p>

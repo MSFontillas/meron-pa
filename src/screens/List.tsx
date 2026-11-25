@@ -3,15 +3,15 @@ import { CATS, type Item } from "../data/types";
 
 export const QUICK: [string, string][] = [["Kangkong", "🥬"], ["Tomatoes", "🍅"], ["Onions", "🧅"], ["Garlic", "🧄"], ["Pork", "🥩"], ["Chicken", "🍗"], ["Bangus", "🐟"], ["Pandesal", "🥖"]];
 
-interface Props { items: Item[]; onAdd: (name: string, icon?: string) => void; onTick: (i: Item, v: boolean) => void; onPutAway: (b: Item[]) => void }
+interface Props { items: Item[]; sizes: Record<string, string>; onAdd: (name: string, icon?: string) => void; onTick: (i: Item, v: boolean) => void; onPutAway: (b: Item[]) => void }
 
-export function List({ items, onAdd, onTick, onPutAway }: Props) {
+export function List({ items, sizes, onAdd, onTick, onPutAway }: Props) {
   const [text, setText] = useState("");
   const list = items.filter((i) => i.onList);
   const toBuy = list.filter((i) => !i.inBasket), got = list.filter((i) => i.inBasket), n = got.length;
   const row = (i: Item) => (
     <button class="check" role="checkbox" aria-checked={i.inBasket} key={i.id} data-item={i.name} onClick={() => onTick(i, !i.inBasket)}>
-      <span class="box" aria-hidden="true">{i.inBasket ? "✓" : ""}</span><span class="emoji" aria-hidden="true">{i.icon}</span><span class="lbl">{i.name}</span>
+      <span class="box" aria-hidden="true">{i.inBasket ? "✓" : ""}</span><span class="emoji" aria-hidden="true">{i.icon}</span><span class="lbl">{i.name}{i.barcode && sizes[i.barcode] && <small class="size">{sizes[i.barcode]}</small>}</span>
     </button>
   );
   return (

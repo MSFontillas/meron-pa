@@ -53,17 +53,14 @@ test("scan: database product, then name an unknown one once", async ({ page }) =
   await open(page);
   await nav(page, "Scan").click();
   await page.evaluate(() => (window as any).__setBarcode("4801234012342"));
-  await page.getByRole("button", { name: "Scan barcode" }).click();
   await expect(page.getByRole("heading", { name: "Purefoods Corned Beef" })).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: "Add to At Home" }).click();
 
   await page.evaluate(() => (window as any).__setBarcode("4809012090124"));
-  await page.getByRole("button", { name: "Scan barcode" }).click();
   await expect(page.getByRole("heading", { name: "New product" })).toBeVisible({ timeout: 20_000 });
   await page.getByLabel("Product name").fill("Ube jam");
   await page.getByRole("button", { name: "Add to At Home" }).click();
 
-  await page.getByRole("button", { name: "Scan barcode" }).click(); // same barcode again
   await expect(page.getByRole("heading", { name: "Ube jam" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Named by your home before")).toBeVisible();
   await page.getByRole("button", { name: "Add to At Home" }).click();
@@ -116,7 +113,6 @@ test("starting a new list keeps the old one reachable", async ({ page }) => {
 test("leaving Scan while the camera starts turns the camera off", async ({ page }) => {
   await open(page);
   await nav(page, "Scan").click();
-  await page.getByRole("button", { name: "Scan barcode" }).click();
   await nav(page, "At Home").click(); // leave before the camera finished starting
   await page.waitForTimeout(800);
   expect(await page.evaluate(() => (window as any).__stream.getTracks().every((t: MediaStreamTrack) => t.readyState === "ended"))).toBe(true);
