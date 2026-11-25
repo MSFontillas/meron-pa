@@ -31,7 +31,7 @@ export function App() {
 
   const say = (msg: string, undo?: () => void) => {
     setToast({ msg, undo }); clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setToast(null), undo ? 5000 : 2400);
+    timer.current = window.setTimeout(() => setToast(null), undo ? 8000 : 2400);
   };
   // Every swipe can be taken back: the item is written back exactly as it was.
   const undoable = (i: Item, msg: string) => say(msg, () => { store.restore(home, i, fail); setToast(null); });
@@ -128,7 +128,7 @@ export function App() {
               onDelete={(i) => { store.removeItem(home, i, fail); undoable(i, `${i.name} deleted`); }}
               onEdit={(i) => setEdit(i)} onAdd={() => setEdit("new")} onCheck={() => setChecking(true)} />
           : tab === "scan" ? <Scan items={list} resolve={resolve} onAdd={onScanAdd} onManual={() => setEdit("new")} />
-          : <List items={list} sizes={sizes}
+          : <List items={list} sizes={sizes} onCheck={() => setChecking(true)}
               onRemove={(i) => { store.removeFromList(home, i, fail); undoable(i, `${i.name} removed from your list`); }}
               onTick={(i, v) => store.setInBasket(home, i, v, fail)}
               onPutAway={(b) => { store.putAway(home, b, fail); say(`${b.length} ${b.length === 1 ? "item" : "items"} put away`); }} />}

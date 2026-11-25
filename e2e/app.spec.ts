@@ -334,3 +334,24 @@ test("screen reader tree: names, roles and states", async ({ page }) => {
   await expect(page.getByRole("checkbox", { name: "Toyo" })).toHaveAttribute("aria-checked", "false");
   await expect(page.getByRole("status")).toHaveCount(0);
 });
+
+test("a long list scrolls; rows keep their full height (were squashed to fit the screen)", async ({ page }) => {
+  await open(page);
+  for (let i = 0; i < 12; i++) await addByHand(page, `Item ${i}`, 1);
+  const hs = await page.locator(".item").evaluateAll((els) => els.map((e) => (e as HTMLElement).offsetHeight));
+  expect(Math.min(...hs)).toBeGreaterThanOrEqual(56);
+  const view = page.locator("main.view");
+  expect(await view.evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(true); // it scrolls instead of squeezing
+  await expect(page.locator('.item[data-item="Item 11"]')).toBeAttached();
+});
+
+test("touch targets are at least 44px", async ({ page }) => {
+  await open(page);
+  await addByHand(page, "Toyo", 1);
+  const small = await page.evaluate(() => [...document.querySelectorAll("button, select, input")].map((e) => {
+    const r = (e as HTMLElement).getBoundingClientRect(); return { t: ((e as HTMLElement).innerText || e.getAttribute("aria-label") || "").slice(0, 20), w: r.width, h: r.height };
+  }).filter((x) => x.w && x.h && (x.w < 44 || x.h < 44)));
+  expect(small.filter((x) => x.t !== "Toyo")).toEqual([]);
+  const tap = await page.locator(".item-name").evaluate((e) => { const r = getComputedStyle(e, "::after"); return parseFloat(r.height); }); // overlay grows the target
+  expect(tap).toBeGreaterThanOrEqual(44);
+});

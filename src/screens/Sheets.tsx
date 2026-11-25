@@ -40,7 +40,7 @@ export function EditSheet({ item, onSave, onRemove, onClose }: {
           <input id="f-want" type="number" min={0} max={999} inputMode="numeric" value={v.want || ""} onInput={set("want")} placeholder="e.g. 12" aria-describedby="f-want-hint" />
           <small id="f-want-hint" class="hint">Your shopping list will say how many to buy.</small></div>
         <div class="two"><button type="button" class="big outline" onClick={onClose}>Cancel</button><button class="big" type="submit">Save</button></div>
-        {onRemove && <button type="button" class="big danger" onClick={onRemove}>Remove from app</button>}
+        {onRemove && <button type="button" class="big danger" onClick={onRemove}>Delete this item</button>}
       </form>
     </div>
   );
