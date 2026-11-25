@@ -20,7 +20,8 @@ async function makeDetector(): Promise<Detector> {
 
 export type ScanError = "no-camera" | "denied" | "failed";
 
-/** Opens the back camera in `video` and calls onCode once with the first barcode seen. Returns stop(). */
+/** Opens the back camera in `video` and keeps scanning. onCode fires once per barcode; the same one fires again
+ * only after it has left the frame for a second (so one can = one count). Returns stop(). */
 export async function startScanner(video: HTMLVideoElement, onCode: (code: string) => void): Promise<() => void> {
   if (!navigator.mediaDevices?.getUserMedia) throw "no-camera" as ScanError;
   let stream: MediaStream;
@@ -34,14 +35,18 @@ export async function startScanner(video: HTMLVideoElement, onCode: (code: strin
   video.muted = true;
   await video.play().catch(() => {});
   const detector = await makeDetector();
-  let stopped = false;
+  let stopped = false, last = "", lastSeen = 0;
   const stop = () => { stopped = true; stream.getTracks().forEach((t) => t.stop()); video.srcObject = null; };
   const tick = async () => {
     if (stopped) return;
     try {
       if (video.readyState >= 2) {
         const hit = (await detector.detect(video))[0];
-        if (hit?.rawValue && !stopped) { stop(); onCode(hit.rawValue); return; }
+        if (hit?.rawValue && !stopped) {
+          const now = Date.now(), fresh = hit.rawValue !== last || now - lastSeen > 1000;
+          last = hit.rawValue; lastSeen = now;
+          if (fresh) onCode(hit.rawValue);
+        }
       }
     } catch { /* a bad frame; keep trying */ }
     setTimeout(tick, 150);

@@ -7,7 +7,7 @@ import { toggleTheme } from "./theme";
 import { pickIcon, type Item } from "./data/types";
 import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
-import { Scan, type ScanResult } from "./screens/Scan";
+import { Scan, type ScanResult, type Where } from "./screens/Scan";
 import { Tutorial, tutorialSeen } from "./screens/Tutorial";
 import { EditSheet, ShareSheet, JoinSheet, type EditValues } from "./screens/Sheets";
 
@@ -80,13 +80,15 @@ export function App() {
     return { code, product: found, source: found ? "db" : null };
   };
 
-  const onScanAdd = (r: ScanResult, name: string, where: "home" | "list") => {
+  const onScanAdd = (r: ScanResult, name: string, where: Where) => {
     const cat = r.product?.cat ?? "Other";
     const icon = pickIcon(name, cat);
     if (r.source !== "home") store.saveProduct(home, r.code, { name, cat, icon, size: r.product?.size ?? "" }, fail);
     const t = { name, cat, icon, barcode: r.code };
-    if (where === "home") { store.addToHome(home, list, t, fail); say(`${name} added to At Home`); }
-    else { store.addToList(home, list, t, fail); say(`${name} added to your list`); }
+    const prev = store.findSame(list, name, r.code);
+    const id = where === "home" ? store.addToHome(home, list, t, fail) : store.addToList(home, list, t, fail);
+    const back = () => { if (prev) store.restore(home, prev, fail); else store.removeItem(home, { id }, fail); setToast(null); };
+    say(where === "home" ? `${name} +1 At Home${prev?.onList ? ", off your list" : ""}` : `${name} added to your list`, back);
   };
 
   const saveEdit = (v: EditValues) => {
@@ -115,7 +117,7 @@ export function App() {
           <button class="top-btn" onClick={() => setSharing(true)}>Share list</button>
         </div>
       </header>
-      <main class="view">
+      <main class={tab === "scan" ? "view scan-view" : "view"}>
         {items === null ? <p class="count">Loading…</p>
           : tab === "home" ? <AtHome items={list} sizes={sizes}
               onInc={(i) => store.changeQty(home, i, 1, fail)}
@@ -123,16 +125,16 @@ export function App() {
               onOut={(i) => { store.ranOut(home, i, fail); undoable(i, `${i.name} ran out, added to your list`); }}
               onDelete={(i) => { store.removeItem(home, i, fail); undoable(i, `${i.name} deleted`); }}
               onEdit={(i) => setEdit(i)} onAdd={() => setEdit("new")} />
-          : tab === "scan" ? <Scan resolve={resolve} onAdd={onScanAdd} onManual={() => setEdit("new")} />
+          : tab === "scan" ? <Scan items={list} resolve={resolve} onAdd={onScanAdd} onManual={() => setEdit("new")} />
           : <List items={list} sizes={sizes}
               onRemove={(i) => { store.removeFromList(home, i, fail); undoable(i, `${i.name} removed from your list`); }}
               onTick={(i, v) => store.setInBasket(home, i, v, fail)}
               onPutAway={(b) => { store.putAway(home, b, fail); say(`${b.length} ${b.length === 1 ? "item" : "items"} put away`); }} />}
       </main>
       <nav class="nav" aria-label="Tabs">
-        <button class="tab" aria-current={tab === "home" ? "page" : undefined} onClick={() => setTab("home")}><span class="ic">🏠</span>At Home</button>
-        <button class="tab scan" aria-current={tab === "scan" ? "page" : undefined} onClick={() => setTab("scan")}><span class="ic">▥</span>Scan</button>
-        <button class="tab" aria-current={tab === "list" ? "page" : undefined} onClick={() => setTab("list")}><span class="ic">🛒</span>List{toBuy > 0 && <span class="dot">{toBuy}</span>}</button>
+        <button class="tab" aria-current={tab === "home" ? "page" : undefined} onClick={() => setTab("home")}><span class="ic" aria-hidden="true">🏠</span>At Home</button>
+        <button class="tab scan" aria-current={tab === "scan" ? "page" : undefined} onClick={() => setTab("scan")}><span class="ic" aria-hidden="true">▥</span>Scan</button>
+        <button class="tab" aria-current={tab === "list" ? "page" : undefined} onClick={() => setTab("list")}><span class="ic" aria-hidden="true">🛒</span>List{toBuy > 0 && <span class="dot">{toBuy}</span>}</button>
       </nav>
       {edit && <EditSheet item={edit === "new" ? null : edit} onSave={saveEdit} onClose={() => setEdit(null)}
         onRemove={edit === "new" ? undefined : () => { store.removeItem(home, edit, fail); setEdit(null); say("Removed"); }} />}

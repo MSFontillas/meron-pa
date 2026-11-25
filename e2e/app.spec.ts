@@ -61,25 +61,61 @@ test("add, count, run out, shop with undo, put away", async ({ page }) => {
   await expect(card(page, "Shampoo sachets").locator("output")).toHaveText(/^1/);
 });
 
-test("scan: database product, then name an unknown one once", async ({ page }) => {
+const mode = (p: Page, name: string) => p.getByRole("group", { name: "Scanned items go to" }).getByRole("button", { name });
+const show = async (p: Page, code: string) => { // take the old barcode out of view first, like a real hand
+  await p.evaluate(() => (window as any).__setBarcode(""));
+  await p.waitForTimeout(1200);
+  await p.evaluate((c) => (window as any).__setBarcode(c), code);
+};
+
+test("scan: known products add straight away, an unknown one is named once", async ({ page }) => {
   await open(page);
   await nav(page, "Scan").click();
-  await page.evaluate(() => (window as any).__setBarcode("4801234012342"));
-  await expect(page.getByRole("heading", { name: "Purefoods Corned Beef" })).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("button", { name: "Add to At Home" }).click();
+  await expect(mode(page, "At Home")).toHaveAttribute("aria-pressed", "true");
+  await show(page, "4801234012342");
+  await expect(page.getByText("Purefoods Corned Beef +1 At Home")).toBeVisible({ timeout: 20_000 });
 
-  await page.evaluate(() => (window as any).__setBarcode("4809012090124"));
+  await show(page, "4809012090124");
   await expect(page.getByRole("heading", { name: "New product" })).toBeVisible({ timeout: 20_000 });
   await page.getByLabel("Product name").fill("Ube jam");
   await page.getByRole("button", { name: "Add to At Home" }).click();
 
-  await expect(page.getByRole("heading", { name: "Ube jam" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText("Named by your home before")).toBeVisible();
-  await page.getByRole("button", { name: "Add to At Home" }).click();
+  await show(page, "4809012090124"); // same jar again: now known, no questions
+  await expect(page.getByText("Ube jam +1 At Home")).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(2500); // the toast above is still the first one; let the second scan land
 
   await nav(page, "At Home").click();
-  await expect(card(page, "Purefoods Corned Beef")).toBeVisible();
-  await expect(card(page, "Ube jam").locator("output")).toHaveText(/^2/);
+  await expect(card(page, "Purefoods Corned Beef").locator("output")).toHaveText("1");
+  await expect(card(page, "Ube jam").locator("output")).toHaveText("2");
+});
+
+test("scan to List warns when you still have some; scan to At Home takes it off the list; Undo", async ({ page }) => {
+  await open(page);
+  await nav(page, "Scan").click();
+  await show(page, "4801234012342");
+  await expect(page.getByText("Purefoods Corned Beef +1 At Home")).toBeVisible({ timeout: 20_000 });
+
+  await mode(page, "List").click();
+  await show(page, "4801234012342");
+  await expect(page.getByRole("heading", { name: "You still have 1 Purefoods Corned Beef" })).toBeVisible({ timeout: 20_000 });
+  await page.getByRole("button", { name: "No", exact: true }).click();
+  await show(page, "4801234012342");
+  await page.getByRole("button", { name: "Add to List" }).click();
+  await expect(page.getByText("Purefoods Corned Beef added to your list")).toBeVisible();
+
+  await page.reload(); // the switch is remembered
+  await nav(page, "Scan").click();
+  await expect(mode(page, "List")).toHaveAttribute("aria-pressed", "true");
+  await mode(page, "At Home").click();
+  await show(page, "4801234012342");
+  await expect(page.getByText("Purefoods Corned Beef +1 At Home, off your list")).toBeVisible({ timeout: 20_000 });
+  await nav(page, "List").click();
+  await expect(page.getByText("0 to buy")).toBeVisible();
+
+  await page.getByRole("button", { name: "Undo" }).click(); // back on the list, 1 at home
+  await expect(page.getByText("1 to buy")).toBeVisible();
+  await nav(page, "At Home").click();
+  await expect(card(page, "Purefoods Corned Beef").locator("output")).toHaveText("1");
 });
 
 test("share link: a second phone joins and both see changes", async ({ browser }) => {

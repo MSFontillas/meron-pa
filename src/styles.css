@@ -1,7 +1,7 @@
 :root {
   --bg: #FBF5E9; --surface: #FFFDF8; --ink: #2B2420; --muted: #685D53; --line: #EADFCC;
-  --leaf: #2C8A4B; --on-leaf: #FFFFFF; --leaf-soft: #E5EFD9;
-  --tomato: #C8432A; --butter: #E9B52A; --cam: #18201A; --cam-ink: #F2F6F2;
+  --leaf: #237A41; --on-leaf: #FFFFFF; --leaf-soft: #E5EFD9;
+  --tomato: #C8432A; --on-tomato: #FFFFFF; --field-line: #8F8274; --butter: #E9B52A; --cam: #18201A; --cam-ink: #F2F6F2;
   --shadow: 0 10px 30px rgba(43, 36, 32, .14);
   --f-display: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
   --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
@@ -9,11 +9,11 @@
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #1B1426; --surface: #261C35; --ink: #F0EAF7; --muted: #B6AAC8; --line: #3B2F50;
-  --leaf: #6BCB89; --on-leaf: #10201A; --leaf-soft: #2F2546; --tomato: #FF8A70; --cam: #110C19;
+  --leaf: #6BCB89; --on-leaf: #10201A; --leaf-soft: #2F2546; --tomato: #FF8A70; --on-tomato: #2A0E08; --field-line: #7A6E8C; --cam: #110C19;
   --shadow: 0 10px 30px rgba(0,0,0,.45); color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #1B1426; --surface: #261C35; --ink: #F0EAF7; --muted: #B6AAC8; --line: #3B2F50;
-  --leaf: #6BCB89; --on-leaf: #10201A; --leaf-soft: #2F2546; --tomato: #FF8A70; --cam: #110C19;
+  --leaf: #6BCB89; --on-leaf: #10201A; --leaf-soft: #2F2546; --tomato: #FF8A70; --on-tomato: #2A0E08; --field-line: #7A6E8C; --cam: #110C19;
   --shadow: 0 10px 30px rgba(0,0,0,.45); color-scheme: dark }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
@@ -46,7 +46,7 @@ p { margin: 0 }
 .ghost { border: 2px solid var(--line); background: var(--surface); border-radius: 999px; padding: 9px 14px; font-weight: 700; font-size: 15px; min-height: 44px }
 
 .add-row { display: flex; gap: 8px }
-.add-row input, .field input, .field select, .new-name { flex: 1; min-width: 0; font-size: 18px; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); color: var(--ink) }
+.add-row input, .field input, .field select, .new-name { flex: 1; min-width: 0; font-size: 18px; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--field-line); background: var(--surface); color: var(--ink) }
 .big { border: 0; background: var(--leaf); color: var(--on-leaf); border-radius: 16px; padding: 12px 18px; font-weight: 700; font-size: 18px; min-height: 48px }
 .big.outline { border: 2px solid var(--leaf); background: var(--surface); color: var(--leaf) }
 .big.danger { background: none; border: 2px solid var(--tomato); color: var(--tomato) }
@@ -96,7 +96,7 @@ p { margin: 0 }
 .swipe-row { position: relative; transition: transform .2s ease }
 .swipe-bg { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 20px; font-weight: 700; color: #fff; border-radius: 18px }
 .swipe-bg.right { background: var(--leaf); color: var(--on-leaf); justify-content: flex-start }
-.swipe-bg.left { background: var(--tomato); justify-content: flex-end }
+.swipe-bg.left { background: var(--tomato); color: var(--on-tomato); justify-content: flex-end }
 .toast { display: flex; align-items: center; justify-content: center; gap: 12px }
 .toast-undo { border: 0; background: var(--leaf); color: var(--on-leaf); border-radius: 12px; padding: 8px 14px; font-weight: 700; font-size: 16px; min-height: 40px; flex-shrink: 0 }
 .tut { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; padding-top: env(safe-area-inset-top, 0px) }
@@ -106,3 +106,14 @@ p { margin: 0 }
 .tut-end span { font-size: 56px }
 .tut-end h2 { font-family: var(--f-display); font-size: 28px; margin: 0 }
 .tut-end p { margin: 0; font-size: 18px; color: var(--muted) }
+.cam-busy { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); margin: 0; background: rgba(0,0,0,.6); color: #fff; padding: 6px 12px; border-radius: 999px; font-weight: 700; font-size: 15px }
+.scan-foot { position: sticky; bottom: 0; margin-top: auto; display: grid; gap: 8px; padding-top: 10px; background: var(--bg) }
+.mode-h { margin: 0; font-size: 15px; color: var(--muted); font-weight: 700; text-align: center }
+.mode { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border: 2px solid var(--line); border-radius: 18px; padding: 4px; gap: 4px }
+.mode button { border: 0; background: none; border-radius: 14px; min-height: 56px; font-weight: 700; font-size: 18px; color: var(--ink) }
+.mode button[aria-pressed="true"] { background: var(--leaf); color: var(--on-leaf) }
+.scan-view { display: flex; flex-direction: column }
+.scan-view .cam { flex-shrink: 0 }
+@media (prefers-reduced-motion: reduce) { .swipe-row { transition: none } }
+.cam.small { max-height: 20vh }
+.result .link { padding: 4px; min-height: 36px }

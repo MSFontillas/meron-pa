@@ -73,21 +73,20 @@ function newDoc(t: NewThing, qty: number, onList: boolean) {
   return data;
 }
 
-export function addToHome(home: string, items: Item[], t: NewThing, fail: Fail, qty = 1): void {
+/** Adds to At Home. Bought it, so it also comes off the shopping list. Returns the item id. */
+export function addToHome(home: string, items: Item[], t: NewThing, fail: Fail, qty = 1): string {
   const n = Math.max(1, Math.min(LIMITS.qty, Math.round(qty)));
   const same = findSame(items, t.name, t.barcode);
-  const p = same
-    ? updateDoc(itemRef(home, same.id), { qty: increment(n), ...stamp() })
-    : setDoc(doc(itemsCol(home)), newDoc(t, n, false));
-  p.catch(fail);
+  const ref = same ? itemRef(home, same.id) : doc(itemsCol(home));
+  (same ? updateDoc(ref, { qty: increment(n), onList: false, inBasket: false, ...stamp() }) : setDoc(ref, newDoc(t, n, false))).catch(fail);
+  return ref.id;
 }
 
-export function addToList(home: string, items: Item[], t: NewThing, fail: Fail): void {
+export function addToList(home: string, items: Item[], t: NewThing, fail: Fail): string {
   const same = findSame(items, t.name, t.barcode);
-  const p = same
-    ? updateDoc(itemRef(home, same.id), { onList: true, ...stamp() })
-    : setDoc(doc(itemsCol(home)), newDoc(t, 0, true));
-  p.catch(fail);
+  const ref = same ? itemRef(home, same.id) : doc(itemsCol(home));
+  (same ? updateDoc(ref, { onList: true, ...stamp() }) : setDoc(ref, newDoc(t, 0, true))).catch(fail);
+  return ref.id;
 }
 
 export function changeQty(home: string, item: Item, delta: 1 | -1, fail: Fail): void {
@@ -133,7 +132,7 @@ export function removeFromList(home: string, it: Item, fail: Fail): void {
   (it.qty > 0 ? updateDoc(itemRef(home, it.id), { onList: false, inBasket: false, ...stamp() }) : deleteDoc(itemRef(home, it.id))).catch(fail);
 }
 
-export function removeItem(home: string, item: Item, fail: Fail): void {
+export function removeItem(home: string, item: Pick<Item, "id">, fail: Fail): void {
   deleteDoc(itemRef(home, item.id)).catch(fail);
 }
 

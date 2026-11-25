@@ -1,4 +1,16 @@
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+
+/** Dialog behaviour: focus moves in on open, Escape closes (the backdrop tap is a mouse/touch extra). */
+function useDialog(onClose?: () => void) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const back = document.activeElement as HTMLElement | null;
+    if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
+    return () => back?.focus?.(); // focus returns to the button that opened it
+  }, []);
+  const onKeyDown = (e: KeyboardEvent) => { if (e.key === "Escape" && onClose) { e.stopPropagation(); onClose(); } };
+  return { ref, onKeyDown };
+}
 import qrcode from "qrcode-generator";
 import { CATS, type Cat, type Item } from "../data/types";
 
@@ -12,10 +24,11 @@ export function EditSheet({ item, onSave, onRemove, onClose }: {
     const t = e.target as HTMLInputElement;
     setV({ ...v, [k]: k === "qty" ? Number(t.value) : t.value });
   };
+  const dlg = useDialog(onClose);
   return (
-    <div class="sheet-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div class="sheet-bg" role="dialog" aria-modal="true" aria-labelledby="sheet-h" tabIndex={-1} ref={dlg.ref as never} onClick={(e) => e.target === e.currentTarget && onClose()} onKeyDown={dlg.onKeyDown}>
       <form class="sheet" onSubmit={(e) => { e.preventDefault(); if (v.name.trim()) onSave(v); }}>
-        <h2>{item ? "Edit item" : "Add item"}</h2>
+        <h2 id="sheet-h">{item ? "Edit item" : "Add item"}</h2>
         <div class="field"><label for="f-name">Name</label><input id="f-name" value={v.name} onInput={set("name")} maxLength={40} required autoFocus={!item} /></div>
         <div class="field"><label for="f-cat">Kind</label>
           <select id="f-cat" value={v.cat} onChange={set("cat")}>{CATS.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
@@ -40,10 +53,11 @@ export function ShareSheet({ link, onClose, onNewList, onBack }: { link: string;
   const share = async () => {
     try { await navigator.share({ title: "Our grocery list", text: "Join our grocery list:", url: link }); } catch { /* cancelled */ }
   };
+  const dlg = useDialog(onClose);
   return (
-    <div class="sheet-bg" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div class="sheet-bg" role="dialog" aria-modal="true" aria-labelledby="share-h" tabIndex={-1} ref={dlg.ref as never} onClick={(e) => e.target === e.currentTarget && onClose()} onKeyDown={dlg.onKeyDown}>
       <div class="sheet">
-        <h2>Share this list</h2>
+        <h2 id="share-h">Share this list</h2>
         <p class="hint">Anyone with this link can see and change your list, like a spare house key. Share it only with people at home. No sign-up needed.</p>
         <p class="hint">Keep this link (send it to yourself). If your phone ever clears this app's data, opening the link brings your list back. Adding the app to your home screen helps your phone keep it.</p>
         <div class="qr" aria-label="QR code of the share link" dangerouslySetInnerHTML={{ __html: svg }} />
@@ -64,9 +78,10 @@ export function ShareSheet({ link, onClose, onNewList, onBack }: { link: string;
 }
 
 export function JoinSheet({ myCount, onJoin, onCancel }: { myCount: number; onJoin: (bring: boolean) => void; onCancel: () => void }) {
+  const dlg = useDialog(onCancel);
   return (
     <div class="sheet-bg">
-      <div class="sheet">
+      <div class="sheet" role="dialog" aria-modal="true" aria-label="Join this list?" tabIndex={-1} ref={dlg.ref as never}>
         <h2>Join this shared list?</h2>
         <p class="hint">You'll see and change the same list as the person who sent the link.</p>
         {myCount > 0
