@@ -3,6 +3,7 @@ import { APP_NAME } from "./config";
 import { getHomeId, setHomeId, getPrevHomeId, newHomeId, shareLink, joinIdFromHash } from "./data/home";
 import * as store from "./data/store";
 import { lookupBarcode } from "./data/lookup";
+import { toggleTheme } from "./theme";
 import { pickIcon, type Item } from "./data/types";
 import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
@@ -15,6 +16,7 @@ export function App() {
   const [ready, setReady] = useState<"loading" | "ok" | "offline">("loading");
   const [home, setHome] = useState(() => getHomeId());
   const [items, setItems] = useState<Item[] | null>(null);
+  const [isDark, setIsDark] = useState(() => document.documentElement.dataset.theme === "dark" || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches));
   const [sizes, setSizes] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<Tab>("home");
   const [edit, setEdit] = useState<Item | "new" | null>(null);
@@ -101,7 +103,10 @@ export function App() {
     <div class="app">
       <header class="top">
         <h1>{title}</h1>
-        <button class="top-btn" onClick={() => setSharing(true)}>Share list</button>
+        <div class="top-row">
+          <button class="theme-btn" aria-label="Switch light or dark mode" onClick={() => setIsDark(toggleTheme())}>{isDark ? "☀️" : "🌙"}</button>
+          <button class="top-btn" onClick={() => setSharing(true)}>Share list</button>
+        </div>
       </header>
       <main class="view">
         {items === null ? <p class="count">Loading…</p>
