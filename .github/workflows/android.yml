@@ -60,7 +60,8 @@ jobs:
           SDK="$HOME/android-sdk"
           mkdir -p "$SDK" && cp -r "$ANDROID_HOME/cmdline-tools/latest/." "$SDK/"
           yes | "$SDK/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null || true
-          "$SDK/bin/sdkmanager" --sdk_root="$SDK" "platform-tools" "build-tools;36.1.0" "platforms;android-36" > /dev/null
+          "$SDK/bin/sdkmanager" --sdk_root="$SDK" "platform-tools" "build-tools;36.1.0" "platforms;android-36"
+          ls "$SDK/platforms" "$SDK/build-tools"
           npm install -g @bubblewrap/cli@1.27.0
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$SDK\"}" > ~/.bubblewrap/config.json
