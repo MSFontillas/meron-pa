@@ -20,28 +20,31 @@ export function initStore(): Promise<void> {
   return (setup ??= start().catch((e) => { setup = null; throw e; }));
 }
 
-let sync: { app: ReturnType<typeof initializeApp> } | null = null;
+let built = false;
 
-async function start(): Promise<void> {
-  if (!sync) {
-    const app = initializeApp(firebaseConfig);
-    // App Check proves requests come from this app on a real browser, so scripts can't burn the free quota.
-    // If a blocker stops its script, skip it: otherwise sign-in waits for a token that never comes and the app hangs.
-    if (appCheckKey && !useEmulator && await reachable("https://www.google.com/recaptcha/enterprise.js?render=explicit")) {
-      initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(appCheckKey), isTokenAutoRefreshEnabled: true });
-    }
-    // No popup/redirect sign-in is ever used, so skip that code (smaller download).
-    auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] });
-    db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
-    if (useEmulator) {
-      const host = location.hostname || "127.0.0.1";
-      connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
-      connectFirestoreEmulator(db, host, 8080);
-    }
-    sync = { app };
-  }
+const signIn = async () => {
   await auth.authStateReady(); // restores the saved anonymous user, if any
   if (!auth.currentUser) await signInAnonymously(auth);
+};
+
+async function start(): Promise<void> {
+  if (built) return signIn(); // a retry: only the sign-in can have failed
+  const app = initializeApp(firebaseConfig);
+  // No popup/redirect sign-in is ever used, so skip that code (smaller download).
+  auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] });
+  if (useEmulator) connectAuthEmulator(auth, `http://${location.hostname || "127.0.0.1"}:9099`, { disableWarnings: true });
+  // Sign in right away, in parallel with App Check: waiting for its token first cost seconds on a slow phone.
+  const signedIn = signIn();
+  signedIn.catch(() => {}); // surfaced below; stops an early failure counting as unhandled
+  // App Check proves requests come from this app on a real browser, so scripts can't burn the free quota.
+  // If a blocker stops its script, skip it: otherwise requests wait for a token that never comes and the app hangs.
+  if (appCheckKey && !useEmulator && await reachable("https://www.google.com/recaptcha/enterprise.js?render=explicit")) {
+    initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(appCheckKey), isTokenAutoRefreshEnabled: true });
+  }
+  db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+  if (useEmulator) connectFirestoreEmulator(db, location.hostname || "127.0.0.1", 8080);
+  built = true;
+  await signedIn;
 }
 
 const itemsCol = (home: string) => collection(db, "homes", home, "items");

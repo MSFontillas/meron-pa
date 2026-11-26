@@ -3,11 +3,17 @@ const KEY = "homeId";
 const PREV = "prevHomeId";
 const ID_RE = /^[A-Za-z0-9_-]{22,64}$/;
 
+// Lists created in this session are known to be empty, so the screen need not wait for the network to say so.
+const fresh = new Set<string>();
+export const isFreshHome = (id: string) => fresh.has(id);
+
 export function newHomeId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16)); // 128 bits
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const id = btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  fresh.add(id);
+  return id;
 }
 
 export function isHomeId(id: unknown): id is string {

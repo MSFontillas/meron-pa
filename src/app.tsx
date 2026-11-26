@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { APP_NAME } from "./config";
-import { getHomeId, setHomeId, getPrevHomeId, newHomeId, shareLink, joinIdFromHash } from "./data/home";
+import { isFreshHome, getHomeId, setHomeId, getPrevHomeId, newHomeId, shareLink, joinIdFromHash } from "./data/home";
 import * as store from "./data/store";
 import { codeVariants, lookupBarcode } from "./data/lookup";
 import { toggleTheme } from "./theme";
@@ -49,7 +49,7 @@ export function App() {
 
   useEffect(() => {
     if (ready !== "ok") return;
-    setItems(null);
+    setItems(isFreshHome(home) ? [] : null);
     setProducts(null);
     const off = store.watchProducts(home, setProducts);
     const offItems = store.watchItems(home, setItems, () => say("Couldn't load your list."));
