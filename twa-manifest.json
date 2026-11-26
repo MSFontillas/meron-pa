@@ -24,7 +24,7 @@
   "features": {},
   "webManifestUrl": "https://msfontillas.github.io/meron-pa/manifest.webmanifest",
   "fullScopeUrl": "https://msfontillas.github.io/meron-pa/",
-  "minSdkVersion": 21,
+  "minSdkVersion": 24,
   "orientation": "portrait",
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
