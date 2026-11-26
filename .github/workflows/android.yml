@@ -56,16 +56,17 @@ jobs:
 
       - name: Android SDK and Bubblewrap
         run: |
-          # Bubblewrap wants an SDK folder that has bin/sdkmanager at its top: copy the runner's command-line tools there.
-          SDK="$HOME/android-sdk"
-          mkdir -p "$SDK" && cp -r "$ANDROID_HOME/cmdline-tools/latest/." "$SDK/"
-          yes | "$SDK/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null || true
-          "$SDK/bin/sdkmanager" --sdk_root="$SDK" "platform-tools" "build-tools;36.1.0" "platforms;android-35"
+          # Use the runner's own Android SDK (known to build apps). Bubblewrap wants bin/sdkmanager at the top of it.
+          SDK="$ANDROID_HOME"
+          sudo chown -R "$USER" "$SDK"
+          ln -sfn "$SDK/cmdline-tools/latest/bin" "$SDK/bin"
+          yes | "$SDK/bin/sdkmanager" --licenses > /dev/null || true
+          "$SDK/bin/sdkmanager" "platforms;android-35" "build-tools;36.1.0" > /dev/null
+          ls "$SDK/platforms"
           npm install -g @bubblewrap/cli@1.27.0
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$SDK\"}" > ~/.bubblewrap/config.json
-          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV" # the runner sets its own; Gradle refuses two different ones
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
 
       - name: Version from the tag
         if: env.IS_RELEASE == 'true'
