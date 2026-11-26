@@ -6,3 +6,7 @@ playwright-report/
 *-debug.log
 .firebase/
 .env*
+
+# Android signing keys must never be committed
+*.keystore
+*.jks

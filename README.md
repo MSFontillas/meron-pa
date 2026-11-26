@@ -54,3 +54,18 @@ Tests: `npm test` (unit), `npm run test:rules` (security rules, needs Java), `np
 ## Rename the app
 
 Change `APP_NAME` in `src/config.ts` and `name` / `short_name` in `vite.config.ts`.
+
+## Install on a phone (free)
+
+- **iPhone:** open the site in Safari, tap Share, then **Add to Home Screen**.
+- **Android app (APK):** open the repo's **Releases** page on your phone, download the latest `Meron-Pa-*.apk`, open it and allow installing from your browser when asked. Play Protect may say the developer is unknown; that is expected for an app that is not in the Play Store. The app opens the live website full screen, so website updates reach it without a new download.
+
+### Publishing the Android app (maintainer)
+
+1. Add two repository secrets (Settings, Secrets and variables, Actions): `ANDROID_KEYSTORE_B64` (the signing key as one line of base64) and `ANDROID_KEYSTORE_PASSWORD`. Keep a private backup of the key: with a new key, people must uninstall the app to update.
+2. For the app to hide the browser address bar, the site must vouch for the app: create a repo named `<your-user>.github.io` that serves `.well-known/assetlinks.json` (it holds only the public SHA-256 fingerprint of the key). Without it the app still works, with a thin address bar.
+3. Push a tag: `git tag v1.0.0 && git push origin v1.0.0`. The **Android app** workflow builds, signs and attaches `Meron-Pa-v1.0.0.apk` to a new Release.
+
+Other pushes that touch `twa-manifest.json` or the workflow run a test build with a throwaway key and publish nothing.
+
+Later, when Google's developer verification reaches your country (2027), a one-time US$25 Play Console account lets you ship the same app through Google Play.
