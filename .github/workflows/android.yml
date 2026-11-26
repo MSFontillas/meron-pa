@@ -62,7 +62,7 @@ jobs:
           ln -sfn "$SDK/cmdline-tools/latest/bin" "$SDK/bin"
           ln -sfn "$SDK/cmdline-tools/latest/lib" "$SDK/lib" # the sdkmanager script looks for lib/ next to bin/
           yes | "$SDK/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null || true
-          "$SDK/bin/sdkmanager" --sdk_root="$SDK" "platforms;android-35" "build-tools;36.1.0" > /dev/null
+          "$SDK/bin/sdkmanager" --sdk_root="$SDK" "platforms;android-36" "build-tools;36.1.0" > /dev/null
           ls "$SDK/platforms"
           npm install -g @bubblewrap/cli@1.27.0
           mkdir -p ~/.bubblewrap
@@ -79,9 +79,6 @@ jobs:
       - name: Build the APK
         run: |
           bubblewrap update --skipVersionUpgrade --manifest=twa-manifest.json < /dev/null
-          # The generated project asks for API 36, which its Android Gradle Plugin (8.9) cannot find; 35 works.
-          sed -i -E 's/(compileSdkVersion|targetSdkVersion) 36/\1 35/' app/build.gradle
-          grep -nE "compileSdkVersion|targetSdkVersion" app/build.gradle
           yes | bubblewrap build --skipPwaValidation --manifest=twa-manifest.json
           ls -la app-release-signed.apk
 
