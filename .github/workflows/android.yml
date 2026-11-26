@@ -56,10 +56,15 @@ jobs:
 
       - name: Android SDK and Bubblewrap
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          # Bubblewrap wants an SDK folder that has bin/sdkmanager at its top: copy the runner's command-line tools there.
+          SDK="$HOME/android-sdk"
+          mkdir -p "$SDK" && cp -r "$ANDROID_HOME/cmdline-tools/latest/." "$SDK/"
+          yes | "$SDK/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null || true
+          "$SDK/bin/sdkmanager" --sdk_root="$SDK" "platform-tools" "build-tools;36.1.0" "platforms;android-36" > /dev/null
           npm install -g @bubblewrap/cli@1.27.0
           mkdir -p ~/.bubblewrap
-          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$SDK\"}" > ~/.bubblewrap/config.json
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
 
       - name: Version from the tag
         if: env.IS_RELEASE == 'true'
