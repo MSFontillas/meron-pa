@@ -60,6 +60,7 @@ jobs:
           SDK="$ANDROID_HOME"
           sudo chown -R "$USER" "$SDK"
           ln -sfn "$SDK/cmdline-tools/latest/bin" "$SDK/bin"
+          ln -sfn "$SDK/cmdline-tools/latest/lib" "$SDK/lib" # the sdkmanager script looks for lib/ next to bin/
           yes | "$SDK/bin/sdkmanager" --licenses > /dev/null || true
           "$SDK/bin/sdkmanager" "platforms;android-35" "build-tools;36.1.0" > /dev/null
           ls "$SDK/platforms"
