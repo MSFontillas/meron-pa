@@ -61,8 +61,8 @@ jobs:
           sudo chown -R "$USER" "$SDK"
           ln -sfn "$SDK/cmdline-tools/latest/bin" "$SDK/bin"
           ln -sfn "$SDK/cmdline-tools/latest/lib" "$SDK/lib" # the sdkmanager script looks for lib/ next to bin/
-          yes | "$SDK/bin/sdkmanager" --licenses > /dev/null || true
-          "$SDK/bin/sdkmanager" "platforms;android-35" "build-tools;36.1.0" > /dev/null
+          yes | "$SDK/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null || true
+          "$SDK/bin/sdkmanager" --sdk_root="$SDK" "platforms;android-35" "build-tools;36.1.0" > /dev/null
           ls "$SDK/platforms"
           npm install -g @bubblewrap/cli@1.27.0
           mkdir -p ~/.bubblewrap
