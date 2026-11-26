@@ -18,7 +18,17 @@ const csp = [
   "base-uri 'none'",
   "form-action 'none'",
 ].join("; ");
-const cspPlugin = { name: "csp-meta", apply: "build" as const, transformIndexHtml: () => [{ tag: "meta", attrs: { "http-equiv": "Content-Security-Policy", content: csp }, injectTo: "head-prepend" as const }] };
+// Start the TLS handshakes (and the reCAPTCHA download) while our own script is still loading.
+const hints = ["https://firestore.googleapis.com", "https://identitytoolkit.googleapis.com", "https://securetoken.googleapis.com",
+  ...(process.env.VITE_RECAPTCHA_SITE_KEY ? ["https://www.google.com", "https://www.gstatic.com"] : [])];
+const cspPlugin = {
+  name: "csp-meta", apply: "build" as const,
+  transformIndexHtml: () => [
+    { tag: "meta", attrs: { "http-equiv": "Content-Security-Policy", content: csp }, injectTo: "head-prepend" as const },
+    ...hints.map((href) => ({ tag: "link", attrs: { rel: "preconnect", href, crossorigin: "" }, injectTo: "head" as const })),
+    ...(process.env.VITE_RECAPTCHA_SITE_KEY ? [{ tag: "link", attrs: { rel: "preload", as: "script", href: "https://www.google.com/recaptcha/enterprise.js?render=explicit" }, injectTo: "head" as const }] : []),
+  ],
+};
 
 // BASE_PATH is "/<repo-name>/" on GitHub Pages; "/" locally.
 const base = process.env.BASE_PATH || "/";

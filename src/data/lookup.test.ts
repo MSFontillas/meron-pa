@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { codeVariants, lookupBarcode } from "./lookup";
+import { reachable, within } from "./net";
 import { normalizeSize, pickIcon } from "./types";
 
 const reply = (host: string, body: object | null) => async (url: string | URL | Request) => {
@@ -92,5 +93,20 @@ describe("toBuy", () => {
     expect(toBuy({ qty: 2, want: 12 })).toBe(10);
     expect(toBuy({ qty: 12, want: 12 })).toBe(1);
     expect(toBuy({ qty: 0 })).toBe(0);
+  });
+});
+
+describe("net helpers", () => {
+  it("reachable: true on any answer, false on failure or when it takes too long", async () => {
+    expect(await reachable("https://x", 100, (async () => new Response("")) as typeof fetch)).toBe(true);
+    expect(await reachable("https://x", 100, (async () => { throw new TypeError("blocked"); }) as typeof fetch)).toBe(false);
+    const hang = ((_u: string, i?: RequestInit) => new Promise<Response>((_r, rej) => i?.signal?.addEventListener("abort", () => rej(new Error("aborted"))))) as typeof fetch;
+    const t = performance.now();
+    expect(await reachable("https://x", 100, hang)).toBe(false);
+    expect(performance.now() - t).toBeLessThan(500);
+  });
+  it("within: passes the result through, or rejects when too slow", async () => {
+    expect(await within(Promise.resolve(5), 100)).toBe(5);
+    await expect(within(new Promise(() => {}), 50)).rejects.toThrow("slow");
   });
 });

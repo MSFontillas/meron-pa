@@ -7,23 +7,38 @@ import {
 } from "firebase/firestore";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
 import { appCheckKey, firebaseConfig, useEmulator } from "../config";
+import { reachable } from "./net";
 import { CATS, LIMITS, cleanName, normalizeSize, pickIcon, type Cat, type Item, type Product } from "./types";
 
 let db: Firestore;
 let auth: Auth;
 
-/** Starts Firebase with an offline cache and an invisible anonymous sign-in (no account, no email). */
-export async function initStore(): Promise<void> {
-  const app = initializeApp(firebaseConfig);
-  // App Check proves requests come from this app on a real browser, so scripts can't burn the free quota.
-  if (appCheckKey && !useEmulator) initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(appCheckKey), isTokenAutoRefreshEnabled: true });
-  // No popup/redirect sign-in is ever used, so skip that code (smaller download).
-  auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] });
-  db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
-  if (useEmulator) {
-    const host = location.hostname || "127.0.0.1";
-    connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
-    connectFirestoreEmulator(db, host, 8080);
+let setup: Promise<void> | null = null;
+
+/** Starts Firebase with an offline cache and an invisible anonymous sign-in (no account, no email). Safe to call again to retry. */
+export function initStore(): Promise<void> {
+  return (setup ??= start().catch((e) => { setup = null; throw e; }));
+}
+
+let sync: { app: ReturnType<typeof initializeApp> } | null = null;
+
+async function start(): Promise<void> {
+  if (!sync) {
+    const app = initializeApp(firebaseConfig);
+    // App Check proves requests come from this app on a real browser, so scripts can't burn the free quota.
+    // If a blocker stops its script, skip it: otherwise sign-in waits for a token that never comes and the app hangs.
+    if (appCheckKey && !useEmulator && await reachable("https://www.google.com/recaptcha/enterprise.js?render=explicit")) {
+      initializeAppCheck(app, { provider: new ReCaptchaEnterpriseProvider(appCheckKey), isTokenAutoRefreshEnabled: true });
+    }
+    // No popup/redirect sign-in is ever used, so skip that code (smaller download).
+    auth = initializeAuth(app, { persistence: [indexedDBLocalPersistence, browserLocalPersistence] });
+    db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+    if (useEmulator) {
+      const host = location.hostname || "127.0.0.1";
+      connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+      connectFirestoreEmulator(db, host, 8080);
+    }
+    sync = { app };
   }
   await auth.authStateReady(); // restores the saved anonymous user, if any
   if (!auth.currentUser) await signInAnonymously(auth);

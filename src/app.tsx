@@ -4,6 +4,8 @@ import { getHomeId, setHomeId, getPrevHomeId, newHomeId, shareLink, joinIdFromHa
 import * as store from "./data/store";
 import { codeVariants, lookupBarcode } from "./data/lookup";
 import { toggleTheme } from "./theme";
+import { within } from "./data/net";
+import { prefetchDecoder } from "./scan/prefetch";
 import { pickIcon, type Item, type Product } from "./data/types";
 import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
@@ -40,9 +42,10 @@ export function App() {
 
   const boot = () => {
     setReady("loading");
-    store.initStore().then(() => setReady("ok"), () => setReady("offline"));
+    within(store.initStore(), 12000).then(() => setReady("ok"), () => setReady("offline"));
   };
   useEffect(boot, []);
+  useEffect(() => { if (ready === "ok") prefetchDecoder(); }, [ready]);
 
   useEffect(() => {
     if (ready !== "ok") return;
@@ -66,7 +69,7 @@ export function App() {
       <div class="center">
         {ready === "loading" ? <p>Opening your list…</p> : <>
           <h1>{APP_NAME}</h1>
-          <p>Connect to the internet once to set up. After that the app works offline too.</p>
+          <p>Can't reach the list service. Check your internet, and turn off any content blocker for this site. You only need to connect once; after that the app works offline too.</p>
           <button class="big" onClick={boot}>Try again</button>
         </>}
       </div>
