@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { codeVariants, lookupBarcode } from "./lookup";
 import { reachable, within } from "./net";
-import { normalizeSize, pickIcon } from "./types";
+import { lineCost, normalizeSize, parsePeso, peso, pickIcon, priceAge } from "./types";
 
 const reply = (host: string, body: object | null) => async (url: string | URL | Request) => {
   const u = String(url);
@@ -108,5 +108,34 @@ describe("net helpers", () => {
   it("within: passes the result through, or rejects when too slow", async () => {
     expect(await within(Promise.resolve(5), 100)).toBe(5);
     await expect(within(new Promise(() => {}), 50)).rejects.toThrow("slow");
+  });
+});
+
+describe("prices", () => {
+  it("parsePeso reads typed prices into centavos and refuses junk", () => {
+    expect(parsePeso("45")).toBe(4500);
+    expect(parsePeso("45.5")).toBe(4550);
+    expect(parsePeso("₱1,240.75")).toBe(124075);
+    expect(parsePeso(" 0.99 ")).toBe(99);
+    for (const bad of ["", "abc", "-5", "4.555", "1e3", "100000", "12.", ".5"]) expect(parsePeso(bad)).toBeNull();
+  });
+  it("peso formats centavos", () => {
+    expect(peso(4500)).toBe("₱45");
+    expect(peso(4550)).toBe("₱45.50");
+    expect(peso(124000)).toBe("₱1,240");
+    expect(peso(5)).toBe("₱0.05");
+  });
+  it("priceAge says how old a price is", () => {
+    const now = Date.UTC(2026, 10, 27), day = 86_400_000;
+    expect(priceAge(now - 1000, now)).toBe("today");
+    expect(priceAge(now - day, now)).toBe("yesterday");
+    expect(priceAge(now - 3 * day, now)).toBe("3 days ago");
+    expect(priceAge(now - 65 * day, now)).toBe("2 months ago");
+    expect(priceAge(now - 400 * day, now)).toBe("over a year ago");
+  });
+  it("lineCost is price times how many to buy (at least 1)", () => {
+    expect(lineCost({ price: 4500, qty: 1 })).toBe(4500);
+    expect(lineCost({ price: 4500, qty: 2, want: 12 })).toBe(45000);
+    expect(lineCost({ qty: 1 })).toBe(0);
   });
 });

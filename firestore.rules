@@ -7,7 +7,7 @@ service cloud.firestore {
     function cats() { return ['Food & drinks', 'Laundry', 'Bathroom', 'Cleaning', 'Baby', 'Other']; }
 
     function validItem(d) {
-      return d.keys().hasOnly(['name', 'icon', 'cat', 'qty', 'unit', 'onList', 'inBasket', 'barcode', 'want', 'updatedAt'])
+      return d.keys().hasOnly(['name', 'icon', 'cat', 'qty', 'unit', 'onList', 'inBasket', 'barcode', 'want', 'price', 'priceAt', 'updatedAt'])
         && d.keys().hasAll(['name', 'icon', 'cat', 'qty', 'unit', 'onList', 'inBasket', 'updatedAt'])
         && d.name is string && d.name.size() > 0 && d.name.size() <= 40
         && d.icon is string && d.icon.size() <= 8
@@ -16,6 +16,8 @@ service cloud.firestore {
         && d.unit is string && d.unit.size() <= 12
         && d.onList is bool && d.inBasket is bool
         && (!('want' in d) || (d.want is int && d.want >= 0 && d.want <= 999))
+        && (!('price' in d) || (d.price is int && d.price >= 0 && d.price <= 9999999))
+        && (!('priceAt' in d) || d.priceAt is timestamp)
         && (!('barcode' in d) || (d.barcode is string && d.barcode.matches('^[0-9]{8,14}$')))
         && d.updatedAt == request.time;
     }

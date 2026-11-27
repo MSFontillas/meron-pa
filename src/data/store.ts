@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, signInAnonymously, connectAuthEmulator, type Auth } from "firebase/auth";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator,
-  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, increment, serverTimestamp,
+  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, increment, serverTimestamp, Timestamp, deleteField,
   type Firestore,
 } from "firebase/firestore";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
@@ -51,6 +51,12 @@ async function start(): Promise<void> {
 const itemsCol = (home: string) => collection(db, "homes", home, "items");
 const itemRef = (home: string, id: string) => doc(db, "homes", home, "items", id);
 
+function priceOf(d: Record<string, unknown>): { price?: number; priceAt?: number } {
+  if (typeof d.price !== "number" || d.price <= 0) return {};
+  const at = d.priceAt as { toMillis?: () => number } | null | undefined;
+  return { price: d.price, priceAt: typeof at?.toMillis === "function" ? at.toMillis() : Date.now() }; // not yet confirmed by the server: just now
+}
+
 function toItem(id: string, d: Record<string, unknown>): Item | null {
   if (typeof d.name !== "string" || typeof d.qty !== "number") return null;
   const cat = (CATS as readonly string[]).includes(d.cat as string) ? (d.cat as Cat) : "Other";
@@ -61,6 +67,7 @@ function toItem(id: string, d: Record<string, unknown>): Item | null {
     onList: d.onList === true, inBasket: d.inBasket === true,
     barcode: typeof d.barcode === "string" ? d.barcode : undefined,
     want: typeof d.want === "number" && d.want > 0 ? d.want : undefined,
+    ...priceOf(d),
   };
 }
 
@@ -82,7 +89,10 @@ export function findSame(items: Item[], name: string, barcode?: string): Item | 
   return items.find((i) => (barcode && i.barcode === barcode) || i.name.toLowerCase() === n);
 }
 
-export interface NewThing { name: string; icon?: string; cat: Cat; unit?: string; barcode?: string; want?: number }
+export interface NewThing { name: string; icon?: string; cat: Cat; unit?: string; barcode?: string; want?: number; price?: number; priceAt?: number }
+
+/** The fields that record a price: its time is the server's now, or a given time when copying/undoing. */
+const priceFields = (price?: number, at?: number) => (price ? { price: Math.min(LIMITS.price, Math.round(price)), priceAt: at ? Timestamp.fromMillis(at) : serverTimestamp() } : {});
 
 function newDoc(t: NewThing, qty: number, onList: boolean) {
   const data: Record<string, unknown> = {
@@ -91,6 +101,7 @@ function newDoc(t: NewThing, qty: number, onList: boolean) {
   };
   if (t.barcode) data.barcode = t.barcode;
   if (t.want) data.want = Math.min(LIMITS.qty, Math.round(t.want));
+  Object.assign(data, priceFields(t.price, t.priceAt));
   return data;
 }
 
@@ -99,14 +110,14 @@ export function addToHome(home: string, items: Item[], t: NewThing, fail: Fail, 
   const n = Math.max(1, Math.min(LIMITS.qty, Math.round(qty)));
   const same = findSame(items, t.name, t.barcode);
   const ref = same ? itemRef(home, same.id) : doc(itemsCol(home));
-  (same ? updateDoc(ref, { qty: increment(n), onList: false, inBasket: false, ...stamp() }) : setDoc(ref, newDoc(t, n, false))).catch(fail);
+  (same ? updateDoc(ref, { qty: increment(n), onList: false, inBasket: false, ...priceFields(t.price), ...stamp() }) : setDoc(ref, newDoc(t, n, false))).catch(fail);
   return ref.id;
 }
 
 export function addToList(home: string, items: Item[], t: NewThing, fail: Fail): string {
   const same = findSame(items, t.name, t.barcode);
   const ref = same ? itemRef(home, same.id) : doc(itemsCol(home));
-  (same ? updateDoc(ref, { onList: true, ...stamp() }) : setDoc(ref, newDoc(t, 0, true))).catch(fail);
+  (same ? updateDoc(ref, { onList: true, ...priceFields(t.price), ...stamp() }) : setDoc(ref, newDoc(t, 0, true))).catch(fail);
   return ref.id;
 }
 
@@ -130,12 +141,14 @@ export function putAway(home: string, basket: Item[], fail: Fail): void {
   b.commit().catch(fail);
 }
 
-export function editItem(home: string, item: Item, ch: { name: string; cat: Cat; qty: number; unit: string; want: number }, fail: Fail): void {
+export function editItem(home: string, item: Item, ch: { name: string; cat: Cat; qty: number; unit: string; want: number; price: number | null }, fail: Fail): void {
   const qty = Math.max(0, Math.min(LIMITS.qty, Math.round(ch.qty)));
   const want = Math.max(0, Math.min(LIMITS.qty, Math.round(ch.want || 0)));
   updateDoc(itemRef(home, item.id), {
     // only written when set, so homes whose rules predate "want" keep working
     ...(want || item.want ? { want } : {}),
+    // null = no price: clear it; a changed price is stamped now; an unchanged one keeps its date
+    ...(ch.price === null ? (item.price ? { price: deleteField(), priceAt: deleteField() } : {}) : ch.price !== item.price ? priceFields(ch.price) : {}),
     name: cleanName(ch.name) || item.name, cat: ch.cat, qty, unit: ch.unit.slice(0, LIMITS.unit),
     onList: qty === 0 ? true : item.onList, // nothing left at home: it goes on the list
     icon: pickIcon(ch.name, ch.cat), ...stamp(),
@@ -150,6 +163,7 @@ export function restore(home: string, it: Item, fail: Fail): void {
   };
   if (it.barcode) data.barcode = it.barcode;
   if (it.want) data.want = it.want;
+  Object.assign(data, priceFields(it.price, it.priceAt));
   setDoc(itemRef(home, it.id), data).catch(fail);
 }
 
@@ -173,7 +187,7 @@ export async function copyItems(toHome: string, items: Item[]): Promise<void> {
   for (let i = 0; i < items.length; i += 400) { // Firestore allows at most 500 writes per batch
     const b = writeBatch(db);
     for (const it of items.slice(i, i + 400)) {
-      b.set(doc(itemsCol(toHome)), newDoc({ name: it.name, icon: it.icon, cat: it.cat, unit: it.unit, barcode: it.barcode }, it.qty, it.onList));
+      b.set(doc(itemsCol(toHome)), newDoc({ name: it.name, icon: it.icon, cat: it.cat, unit: it.unit, barcode: it.barcode, want: it.want, price: it.price, priceAt: it.priceAt }, it.qty, it.onList));
     }
     commits.push(b.commit());
   }

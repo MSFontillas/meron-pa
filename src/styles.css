@@ -148,3 +148,7 @@ p { margin: 0 }
 .cat-cleaning { background: var(--t-cleaning) !important } .cat-baby { background: var(--t-baby) !important } .cat-other { background: var(--t-other) !important }
 .check .emoji { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center }
 .sc-ic { width: 88px; height: 88px; border-radius: 28px; display: grid; place-items: center; line-height: 1 }
+.ask { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 6px; font-weight: 700; font-size: 1rem }
+.ask input { width: 24px; height: 24px; accent-color: var(--leaf); flex-shrink: 0 }
+.total { margin: 0; font-weight: 700; font-size: 1.1rem; background: var(--leaf-soft); color: var(--ink); border-radius: 14px; padding: 10px 14px }
+.scan-foot.flow { position: static } /* a question card is open: the switches follow it instead of covering its buttons */

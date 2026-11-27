@@ -6,7 +6,7 @@ import { codeVariants, lookupBarcode } from "./data/lookup";
 import { toggleTheme } from "./theme";
 import { within } from "./data/net";
 import { prefetchDecoder } from "./scan/prefetch";
-import { pickIcon, type Item, type Product } from "./data/types";
+import { parsePeso, peso, pickIcon, type Item, type Product } from "./data/types";
 import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
 import { Scan, type ScanResult, type Where } from "./screens/Scan";
@@ -88,23 +88,28 @@ export function App() {
     return { code, product: found, source: found ? "db" : null };
   };
 
-  const onScanAdd = (r: ScanResult, name: string, where: Where) => {
+  const onScanAdd = (r: ScanResult, name: string, where: Where, price?: number) => {
     const cat = r.product?.cat ?? "Other";
     const icon = pickIcon(name, cat);
     if (r.source !== "home") store.saveProduct(home, r.code, { name, cat, icon, size: r.product?.size ?? "" }, fail);
-    const t = { name, cat, icon, barcode: r.code };
+    const t = { name, cat, icon, barcode: r.code, price };
     const prev = store.findSame(list, name, r.code);
     const id = where === "home" ? store.addToHome(home, list, t, fail) : store.addToList(home, list, t, fail);
     const back = () => { if (prev) store.restore(home, prev, fail); else store.removeItem(home, { id }, fail); setToast(null); };
-    say(where === "home" ? `${name} +1 At Home${prev?.onList ? ", off your list" : ""}` : `${name} added to your list`, back);
+    const cost = price ? ` · ${peso(price)}` : "";
+    say(where === "home" ? `${name} +1 At Home${prev?.onList ? ", off your list" : ""}${cost}` : `${name} added to your list${cost}`, back);
   };
 
   const saveEdit = (v: EditValues) => {
+    const typed = v.price.trim();
+    const price = typed === "" ? null : parsePeso(typed);
+    if (typed !== "" && price === null) { say("That price doesn't look right. Use numbers like 45 or 45.50."); return; }
     if (edit === "new") {
-      if (v.qty > 0) store.addToHome(home, list, { name: v.name, cat: v.cat, unit: v.unit, want: v.want }, fail, v.qty);
-      else store.addToList(home, list, { name: v.name, cat: v.cat, unit: v.unit, want: v.want }, fail);
+      const t = { name: v.name, cat: v.cat, unit: v.unit, want: v.want, price: price ?? undefined };
+      if (v.qty > 0) store.addToHome(home, list, t, fail, v.qty);
+      else store.addToList(home, list, t, fail);
       say(`${v.name.trim()} added`);
-    } else if (edit) { store.editItem(home, edit, v, fail); say("Saved"); }
+    } else if (edit) { store.editItem(home, edit, { ...v, price }, fail); say("Saved"); }
     setEdit(null);
   };
 

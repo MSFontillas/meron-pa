@@ -380,3 +380,41 @@ test("keyboard: dialogs trap Tab, Escape closes, focus returns; toast is a live 
   await page.getByRole("button", { name: "One more Eggs" }).click();
   void live;
 });
+
+
+test("optional prices: tick box, price card, list total, edit sheet, undo", async ({ page }) => {
+  await open(page);
+  await nav(page, "Scan").click();
+  const ask = page.getByLabel("Ask for price on each scan");
+  await expect(ask).not.toBeChecked();
+  await show(page, "4801234012342"); // off: adds at once, no price question
+  await expect(page.getByText("Purefoods Corned Beef +1 At Home")).toBeVisible({ timeout: 20_000 });
+
+  await ask.check();
+  await mode(page, "List").click();
+  await page.waitForTimeout(500);
+  await show(page, "4801234012342");
+  await page.getByRole("button", { name: "Add to List" }).click(); // "you still have 1" question
+  await expect(page.getByText("No price saved yet")).toBeVisible();
+  await page.getByLabel("Price (₱)").fill("abc");
+  await page.getByRole("button", { name: "Save price" }).click();
+  await expect(page.getByRole("alert")).toContainText("doesn't look like a price");
+  await page.getByLabel("Price (₱)").fill("45.50");
+  await page.getByRole("button", { name: "Save price" }).click();
+  await expect(page.getByText("Purefoods Corned Beef added to your list · ₱45.50")).toBeVisible();
+
+  await nav(page, "List").click();
+  await expect(page.locator('.check[data-item="Purefoods Corned Beef"]')).toContainText("₱45.50");
+  await expect(page.getByText("About ₱45.50 for 1 item")).toBeVisible();
+
+  await nav(page, "At Home").click();
+  await card(page, "Purefoods Corned Beef").getByRole("button", { name: "Purefoods Corned Beef", exact: true }).click();
+  await expect(page.getByLabel("Price (₱, optional)")).toHaveValue("45.5");
+  await page.getByLabel("Price (₱, optional)").fill("50");
+  await page.getByRole("button", { name: "Save" }).click();
+  await nav(page, "List").click();
+  await expect(page.getByText("About ₱50 for 1 item")).toBeVisible();
+  await page.reload();
+  await nav(page, "Scan").click();
+  await expect(page.getByLabel("Ask for price on each scan")).toBeChecked(); // remembered
+});

@@ -18,6 +18,9 @@ export interface Item {
   barcode?: string;
   /** How many the household usually keeps; the list then says how many to buy. */
   want?: number;
+  /** Last price paid, in centavos (whole numbers avoid rounding errors), and when it was entered (ms). */
+  price?: number;
+  priceAt?: number;
 }
 
 /** A barcode the household (or a public database) has named. */
@@ -28,7 +31,7 @@ export interface Product {
   size: string;
 }
 
-export const LIMITS = { name: 40, unit: 12, icon: 8, size: 30, qty: 999 } as const;
+export const LIMITS = { name: 40, unit: 12, icon: 8, size: 30, qty: 999, price: 9_999_999 } as const;
 
 /** How many to buy: up to the usual amount, at least 1. 0 = no usual amount set. */
 export const toBuy = (it: Pick<Item, "qty" | "want">) => (it.want ? Math.max(it.want - it.qty, 1) : 0);
@@ -91,3 +94,32 @@ export function normalizeSize(raw: string): string {
   found.sort((a, b) => a.rank - b.rank);
   return (found[0]?.text ?? raw.trim()).slice(0, LIMITS.size);
 }
+
+/** "45", "45.5", "₱1,240.50" -> centavos. null when it is not a price. */
+export function parsePeso(text: string): number | null {
+  const t = text.replace(/[₱\s,]|php/gi, "");
+  if (!/^\d{1,5}(\.\d{1,2})?$/.test(t)) return null;
+  const c = Math.round(Number(t) * 100);
+  return c <= LIMITS.price ? c : null;
+}
+
+/** centavos -> "₱45", "₱45.50", "₱1,240". */
+export function peso(centavos: number): string {
+  const whole = Math.floor(centavos / 100), cents = centavos % 100;
+  return "₱" + whole.toLocaleString("en-US") + (cents ? "." + String(cents).padStart(2, "0") : "");
+}
+
+/** Text for an edit box: 4550 -> "45.5", 4500 -> "45". */
+export const pesoInput = (centavos: number) => String(centavos / 100);
+
+/** "today", "3 days ago", "2 months ago". */
+export function priceAge(at: number, now = Date.now()): string {
+  const d = Math.floor((now - at) / 86_400_000);
+  if (d < 1) return "today";
+  if (d < 30) return d === 1 ? "yesterday" : `${d} days ago`;
+  const m = Math.floor(d / 30);
+  return m < 12 ? `${m} ${m === 1 ? "month" : "months"} ago` : "over a year ago";
+}
+
+/** What one list line is expected to cost: price x how many to buy (at least 1). */
+export const lineCost = (it: Pick<Item, "price" | "qty" | "want">) => (it.price ? it.price * (toBuy(it) || 1) : 0);

@@ -52,6 +52,15 @@ describe("firestore rules", () => {
     await assertFails(setDoc(doc(db, "homes", HOME, "items", "w2"), item({ want: 1000 })));
     await assertFails(setDoc(doc(db, "homes", HOME, "items", "w3"), item({ want: "12" })));
   });
+  it("allows an optional price in centavos and the time it was entered", async () => {
+    const db = env.authenticatedContext("u1").firestore();
+    await assertSucceeds(setDoc(doc(db, "homes", HOME, "items", "p1"), item({ price: 4550, priceAt: serverTimestamp() })));
+    await assertFails(setDoc(doc(db, "homes", HOME, "items", "p2"), item({ price: 45.5 })));
+    await assertFails(setDoc(doc(db, "homes", HOME, "items", "p3"), item({ price: -1 })));
+    await assertFails(setDoc(doc(db, "homes", HOME, "items", "p4"), item({ price: 10000000 })));
+    await assertFails(setDoc(doc(db, "homes", HOME, "items", "p5"), item({ price: "45" })));
+    await assertFails(setDoc(doc(db, "homes", HOME, "items", "p6"), item({ price: 100, priceAt: "yesterday" })));
+  });
   it("validates named products", async () => {
     const db = env.authenticatedContext("phone1").firestore();
     await assertSucceeds(setDoc(doc(db, "homes", HOME, "products", "4809012090124"), { name: "Ube jam", icon: "📦", cat: "Other", size: "" }));
