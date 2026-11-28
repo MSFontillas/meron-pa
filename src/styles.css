@@ -71,6 +71,7 @@ p { margin: 0 }
 .result-top { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center }
 .result .pic { width: 64px; height: 64px; font-size: 38px }
 .meta { font-size: 0.875rem; color: var(--muted) }
+.meta a { color: var(--leaf); font-weight: 700 }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px }
 .link { border: 0; background: none; color: var(--leaf); font-weight: 700; text-decoration: underline; padding: 8px; justify-self: center; min-height: 44px }
 

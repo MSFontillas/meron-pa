@@ -1,0 +1,15 @@
+Open Database License (ODbL) v1.0
+
+Contains information from Open Food Facts, Open Beauty Facts, Open Products Facts and
+Open Pet Food Facts (https://world.openfoodfacts.org), made available under the
+Open Database License (ODbL) 1.0.
+
+The files in data/off/ are a copy of that information. The rows in data/products.csv and the
+combined catalog built from both are released under the same licence.
+
+Full licence text: https://opendatacommons.org/licenses/odbl/1-0/
+Individual contents of the database: Database Contents License (DbCL) 1.0,
+https://opendatacommons.org/licenses/dbcl/1-0/
+
+You are free to share, adapt and use this data, as long as you credit Open Food Facts and
+the Meron Pa? catalog, and share any adapted database under the same licence.

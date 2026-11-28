@@ -1,4 +1,4 @@
-import { cleanName, normalizeSize, pickIcon, type Cat, type Product } from "./types";
+import { cleanName, normalizeSize, pickIcon, type Cat, type Product } from "./types.ts";
 
 // Free public product databases (Open Food Facts family). First match wins.
 const SOURCES: { host: string; cat: Cat }[] = [
@@ -18,7 +18,7 @@ export function codeVariants(code: string): string[] {
 
 export const isBarcode = (code: string) => /^[0-9]{8,14}$/.test(code);
 
-function guessCat(base: Cat, tags: unknown): Cat {
+export function guessCat(base: Cat, tags: unknown): Cat {
   const t = Array.isArray(tags) ? tags.join(" ") : "";
   if (/laundry|detergent|fabric-softener/.test(t)) return "Laundry";
   if (/diaper|nappies|baby-wipes|infant-formula/.test(t)) return "Baby";

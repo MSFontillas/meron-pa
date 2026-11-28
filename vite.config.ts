@@ -57,9 +57,13 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png}"],
+        globPatterns: ["**/*.{js,css,html,svg,png}"], // catalog.json is not precached: the first visit stays light
         // The barcode decoder (only needed on phones without a built-in one) is cached on first scan.
-        runtimeCaching: [{ urlPattern: /\.wasm$/, handler: "CacheFirst", options: { cacheName: "wasm" } }],
+        runtimeCaching: [
+          { urlPattern: /\.wasm$/, handler: "CacheFirst", options: { cacheName: "wasm" } },
+          // the product list is fetched on the first scan, then works offline and refreshes in the background
+          { urlPattern: /catalog\.json$/, handler: "StaleWhileRevalidate", options: { cacheName: "catalog" } },
+        ],
         navigateFallback: "index.html",
       },
     }),

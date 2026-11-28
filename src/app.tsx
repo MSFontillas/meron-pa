@@ -3,6 +3,7 @@ import { APP_NAME } from "./config";
 import { isFreshHome, getHomeId, setHomeId, getPrevHomeId, newHomeId, shareLink, joinIdFromHash } from "./data/home";
 import * as store from "./data/store";
 import { codeVariants, lookupBarcode } from "./data/lookup";
+import { lookupCatalog } from "./data/catalog";
 import { toggleTheme } from "./theme";
 import { within } from "./data/net";
 import { prefetchDecoder } from "./scan/prefetch";
@@ -84,6 +85,8 @@ export function App() {
     // Named by this household before: answer from memory at once (network read only if not loaded yet).
     const saved = products ? codeVariants(code).map((c) => products[c]).find(Boolean) ?? null : await store.getSavedProduct(home, code);
     if (saved) return { code, product: saved, source: "home" };
+    const own = await lookupCatalog(code); // local file: instant and works offline
+    if (own) return { code, product: own, source: "catalog" };
     const found = await lookupBarcode(code);
     return { code, product: found, source: found ? "db" : null };
   };

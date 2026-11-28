@@ -10,3 +10,4 @@ playwright-report/
 # Android signing keys must never be committed
 *.keystore
 *.jks
+public/catalog.json

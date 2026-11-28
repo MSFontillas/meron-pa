@@ -89,6 +89,20 @@ test("scan: known products add straight away, an unknown one is named once", asy
   await expect(card(page, "Ube jam").locator("output")).toHaveText("2");
 });
 
+test("scan: a product only in the catalog is found without asking Open Facts", async ({ page }) => {
+  await seen(page);
+  await page.addInitScript(fakeCamera);
+  let off = 0;
+  await page.route(/open(food|beauty|products|petfood)facts\.org/, (r) => { off++; return r.abort(); });
+  await page.route("**/catalog.json", (r) => r.fulfill({ json: { "4800016644801": ["Piattos Cheese", "Food & drinks", "45 g"] } }));
+  await page.goto("/");
+  await nav(page, "Scan").click();
+  await show(page, "4800016644801");
+  await expect(page.getByText("Piattos Cheese +1 At Home")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("From the Meron Pa? catalog")).toBeVisible();
+  expect(off).toBe(0);
+});
+
 test("scan to List warns when you still have some; scan to At Home takes it off the list; Undo", async ({ page }) => {
   await open(page);
   await nav(page, "Scan").click();

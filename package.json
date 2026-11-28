@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/build-catalog.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/build-catalog.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "vitest run src",
+    "test": "vitest run src scripts",
     "test:rules": "firebase emulators:exec --only firestore,auth --project demo-grocery \"vitest run tests\"",
-    "test:e2e": "firebase emulators:exec --only firestore,auth --project demo-grocery \"playwright test --trace off\""
+    "test:e2e": "firebase emulators:exec --only firestore,auth --project demo-grocery \"playwright test --trace off\"",
+    "catalog:fetch": "node scripts/fetch-off.mjs",
+    "catalog:build": "node scripts/build-catalog.mjs"
   },
   "dependencies": {
     "barcode-detector": "3.2.4",

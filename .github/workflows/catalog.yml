@@ -1,0 +1,48 @@
+name: Update product catalog
+
+# Monthly copy of the Open Food Facts products sold in the Philippines into data/off/, then a redeploy.
+# Also runs when the admin's own rows (data/products.csv) change, to give approved rows back to Open Food Facts.
+on:
+  schedule:
+    - cron: "17 3 1 * *"
+  push:
+    branches: [main]
+    paths: ["data/products.csv", "scripts/fetch-off.mjs", "scripts/push-to-off.mjs", ".github/workflows/catalog.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write # commits data/off and data/sent-to-off.txt
+      actions: write # a commit made with GITHUB_TOKEN does not start the deploy by itself
+    env:
+      OFF_USER: ${{ secrets.OFF_USER }}
+      OFF_PASSWORD: ${{ secrets.OFF_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - run: node scripts/fetch-off.mjs
+      # Sends only with an Open Food Facts account saved as secrets OFF_USER and OFF_PASSWORD; otherwise a dry run.
+      - run: node scripts/push-to-off.mjs ${{ env.OFF_USER != '' && env.OFF_PASSWORD != '' && '--send' || '' }}
+      - name: Commit changes and redeploy
+        run: |
+          git add data
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update product catalog data"
+          git push
+          gh workflow run deploy.yml --ref main

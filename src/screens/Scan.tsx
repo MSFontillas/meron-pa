@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { catClass, parsePeso, peso, pesoInput, pickIcon, priceAge, type Item, type Product } from "../data/types";
 import { findSame } from "../data/store";
 
-export interface ScanResult { code: string; product: Product | null; source: "home" | "db" | null }
+export interface ScanResult { code: string; product: Product | null; source: "home" | "catalog" | "db" | null }
 export type Where = "home" | "list";
 interface Props {
   items: Item[];
@@ -32,6 +32,7 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
   const [ask, setAskState] = useState(savedAsk);
   const [priceText, setPriceText] = useState("");
   const [priceErr, setPriceErr] = useState(false);
+  const [from, setFrom] = useState<ScanResult["source"]>(null);
 
   // The scanner callback outlives renders: read the latest values through refs.
   const live = useRef({ mode, items, pending, busy, ask, onAdd, resolve });
@@ -59,6 +60,7 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
     const r = await live.current.resolve(code);
     setBusy(false);
     if (!alive.current) return;
+    setFrom(r.source);
     const { mode: m, items: xs } = live.current;
     if (!r.product) { setName(""); setPriceText(""); setPriceErr(false); setPending({ r, kind: "name" }); return; }
     const have = findSame(xs, r.product.name, r.code);
@@ -152,8 +154,10 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
           <button aria-pressed={mode === "home"} onClick={() => setMode("home")}><span aria-hidden="true">🏠</span> At Home</button>
           <button aria-pressed={mode === "list"} onClick={() => setMode("list")}><span aria-hidden="true">🛒</span> List</button>
         </div>
+        {from === "catalog" && <p class="meta" role="status">From the Meron Pa? catalog</p>}
         <label class="ask"><input type="checkbox" checked={ask} onChange={(e) => setAsk((e.target as HTMLInputElement).checked)} /> Ask for price on each scan</label>
         <button class="link" onClick={onManual}>No barcode? Add it by hand</button>
+        <p class="meta">Product data: <a href="https://github.com/MSFontillas/meron-pa/blob/main/data/README.md" target="_blank" rel="noopener noreferrer">Open Food Facts contributors (ODbL) and Meron Pa?</a></p>
       </div>
     </>
   );

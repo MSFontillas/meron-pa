@@ -6,7 +6,7 @@ palengke quick-add, and a shared list with no sign-up.
 
 - **At Home**: what you have, with + / − and "Ran out".
 - **Shopping List**: tick items as you shop; ticked items wait in "In my basket" (tap again to undo) until you put them away.
-- **Scan**: reads EAN/UPC barcodes with the phone camera. Names come from Open Food Facts, Open Beauty Facts and Open Products Facts; unknown products are named once and remembered by your home.
+- **Scan**: reads EAN/UPC barcodes with the phone camera. Names come first from the app's own catalog (works offline), then from Open Food Facts, Open Beauty Facts and Open Products Facts; unknown products are named once and remembered by your home.
 - **Share list**: a link or QR code. Anyone with it can see and change the list. No accounts.
 
 Works offline after the first open. Installs from the browser ("Add to Home Screen").
@@ -18,6 +18,19 @@ Vite + Preact + TypeScript, installable web app (vite-plugin-pwa), Firebase Fire
 
 Each phone gets a random 128-bit "home" ID. Sharing sends that ID in the link after `#`, so it never reaches the web host.
 `firestore.rules` only allows signed-in phones to reach a home whose exact ID they know, never to list homes, and checks every field.
+
+## Product catalog (owner)
+
+`data/` holds our own barcode list: a weekly copy of the Open Food Facts products sold in the Philippines
+(`data/off/`, refreshed by the "Update product catalog" workflow) plus your own rows in `data/products.csv`
+(they win over the copy). Details and columns: `data/README.md`.
+
+- **Add a product**: open `data/products.csv` on GitHub, click the pencil, add a line such as
+  `4800016644801,Piattos Cheese,Jack n Jill,45 g,Food & drinks,yes`, then Commit. A wrong row fails the build and names the line.
+- **Give products back to Open Food Facts** (optional): create a free account on openfoodfacts.org, then add the repository
+  secrets `OFF_USER` and `OFF_PASSWORD`. Rows with `give_back` = `yes` that OFF lacks are sent once (recorded in `data/sent-to-off.txt`).
+  Without the secrets the step is a dry run.
+- Locally: `npm run catalog:fetch` (slow, about 10 minutes, respects OFF's rate limit) and `npm run catalog:build`.
 
 ## One-time setup (owner)
 
