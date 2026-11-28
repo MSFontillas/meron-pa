@@ -82,3 +82,13 @@ Change `APP_NAME` in `src/config.ts` and `name` / `short_name` in `vite.config.t
 Other pushes that touch `twa-manifest.json` or the workflow run a test build with a throwaway key and publish nothing.
 
 Later, when Google's developer verification reaches your country (2027), a one-time US$25 Play Console account lets you ship the same app through Google Play.
+
+## Adding products from the app (admin)
+
+The shared product list is `data/products.csv`. The owner can add to it from a phone:
+
+1. GitHub → Settings → Developer settings → Fine-grained tokens → this repository only → Contents: Read and write (expiry 90 days to 1 year).
+2. Open `https://msfontillas.github.io/meron-pa/#admin` on the phone and paste the token. It stays in that browser only; "Sign out of admin" deletes it. Never share it.
+3. Scan as usual. Naming a new product also queues it for the catalog (tick boxes on the card). "Fix in catalog" corrects the last scanned product. Rows are committed to `data/products.csv` 30 seconds later, or at once with "Send now" in Admin. Others get them after the catalog build and deploy, about 3–5 minutes.
+
+Revoke the token on GitHub if the phone is lost.

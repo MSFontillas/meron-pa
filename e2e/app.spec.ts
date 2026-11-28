@@ -432,3 +432,38 @@ test("optional prices: tick box, price card, list total, edit sheet, undo", asyn
   await nav(page, "Scan").click();
   await expect(page.getByLabel("Ask for price on each scan")).toBeChecked(); // remembered
 });
+
+test("admin: a name typed while scanning is sent to the shared catalog", async ({ page }) => {
+  const puts: string[] = [];
+  await page.route("https://api.github.com/**", (r) => {
+    const req = r.request();
+    if (req.method() === "PUT") { puts.push(req.postData() ?? ""); return r.fulfill({ status: 200, json: {} }); }
+    if (req.url().includes("/contents/")) return r.fulfill({ json: { sha: "s1", content: Buffer.from("barcode,name,brand,size,kind,give_back\n").toString("base64") } });
+    return r.fulfill({ json: { permissions: { push: true } } });
+  });
+  await open(page);
+  await expect(page.getByRole("button", { name: /^Admin/ })).toHaveCount(0); // ordinary users never see it
+  await page.goto("/#admin");
+  await page.getByLabel("Token").fill("github_pat_test");
+  await page.getByRole("button", { name: "Connect" }).click();
+  await expect(page.getByText("Connected to")).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await nav(page, "Scan").click();
+  await show(page, "4809012090124");
+  await expect(page.getByRole("heading", { name: "New product" })).toBeVisible({ timeout: 20_000 });
+  await page.getByLabel("Product name").fill("Ube jam");
+  await page.getByLabel("Size, optional").fill("340 g");
+  await expect(page.getByLabel("Add to the shared catalog")).toBeChecked();
+  await page.getByRole("button", { name: "Add to At Home" }).click();
+
+  await page.getByRole("button", { name: "Admin (1)" }).click();
+  await expect(page.getByText("1 product waiting")).toBeVisible();
+  await page.getByRole("button", { name: "Send now" }).click();
+  await expect(page.getByText(/Sent 1/)).toBeVisible();
+  expect(Buffer.from(JSON.parse(puts[0]).content, "base64").toString()).toContain("4809012090124,Ube jam");
+
+  await page.getByRole("button", { name: "Sign out of admin" }).click();
+  await expect(page.getByRole("button", { name: /^Admin/ })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("adminToken"))).toBeNull();
+});

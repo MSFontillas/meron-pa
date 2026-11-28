@@ -14,3 +14,6 @@ export const appCheckKey: string = import.meta.env.VITE_RECAPTCHA_SITE_KEY ?? ""
 
 // Local development and tests talk to the Firebase emulators.
 export const useEmulator = import.meta.env.VITE_USE_EMULATOR === "1" || !import.meta.env.VITE_FIREBASE_PROJECT_ID;
+
+// The repository that holds data/products.csv, the shared product list the admin edits from the app.
+export const CATALOG_REPO = "MSFontillas/meron-pa";

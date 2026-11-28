@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { catClass, parsePeso, peso, pesoInput, pickIcon, priceAge, type Item, type Product } from "../data/types";
+import { CATS, catClass, parsePeso, peso, pesoInput, pickIcon, priceAge, type Item, type Product } from "../data/types";
 import { findSame } from "../data/store";
+import { checkRow, type CatalogRow } from "../data/catalogRows";
 
 export interface ScanResult { code: string; product: Product | null; source: "home" | "catalog" | "db" | null }
 export type Where = "home" | "list";
@@ -9,6 +10,8 @@ interface Props {
   resolve: (code: string) => Promise<ScanResult>;
   onAdd: (r: ScanResult, name: string, where: Where, price?: number) => void;
   onManual: () => void;
+  admin?: boolean; // the admin's phone: names typed here can also go into the shared catalog
+  onCatalog?: (row: CatalogRow) => void;
 }
 
 const MODE_KEY = "scanMode";
@@ -18,9 +21,9 @@ const ASK_KEY = "askPrice";
 const savedAsk = (): boolean => { try { return localStorage.getItem(ASK_KEY) === "1"; } catch { return false; } };
 
 /** Pending = a scan that needs the user: a name for a new product, "you still have some", or a price. */
-type Pending = { r: ScanResult; kind: "name" } | { r: ScanResult; kind: "have"; qty: number } | { r: ScanResult; kind: "price" };
+type Pending = { r: ScanResult; kind: "name" } | { r: ScanResult; kind: "have"; qty: number } | { r: ScanResult; kind: "price" } | { r: ScanResult; kind: "fix" };
 
-export function Scan({ items, resolve, onAdd, onManual }: Props) {
+export function Scan({ items, resolve, onAdd, onManual, admin, onCatalog }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const stopRef = useRef<(() => void) | null>(null);
   const [cam, setCam] = useState<"starting" | "on" | "error">("starting");
@@ -33,6 +36,13 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
   const [priceText, setPriceText] = useState("");
   const [priceErr, setPriceErr] = useState(false);
   const [from, setFrom] = useState<ScanResult["source"]>(null);
+  // Admin only: how a new or fixed product is described for the shared catalog.
+  const [aKind, setAKind] = useState<string>(CATS[0]);
+  const [aSize, setASize] = useState("");
+  const [aCat, setACat] = useState(true);
+  const [aGive, setAGive] = useState(true);
+  const [aErr, setAErr] = useState("");
+  const [last, setLast] = useState<ScanResult | null>(null); // the last scanned product, so the admin can fix its catalog entry
 
   // The scanner callback outlives renders: read the latest values through refs.
   const live = useRef({ mode, items, pending, busy, ask, onAdd, resolve });
@@ -61,8 +71,9 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
     setBusy(false);
     if (!alive.current) return;
     setFrom(r.source);
+    if (r.product) setLast(r);
     const { mode: m, items: xs } = live.current;
-    if (!r.product) { setName(""); setPriceText(""); setPriceErr(false); setPending({ r, kind: "name" }); return; }
+    if (!r.product) { setName(""); setPriceText(""); setPriceErr(false); setASize(""); setAKind(CATS[0]); setAErr(""); setPending({ r, kind: "name" }); return; }
     const have = findSame(xs, r.product.name, r.code);
     if (m === "list" && have && have.qty > 0) { setPending({ r, kind: "have", qty: have.qty }); return; }
     addOrAsk(r, r.product.name, m);
@@ -93,7 +104,22 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
   const finish = (add: boolean) => {
     if (!pending) return;
     if (!add) { setPending(null); return; }
-    if (pending.kind === "name") { const n = name.trim(); if (n) commit(pending.r, n, live.current.ask); }
+    if (pending.kind === "name") {
+      const n = name.trim(); if (!n) return;
+      if (!admin) { commit(pending.r, n, live.current.ask); return; }
+      const row: CatalogRow = { code: pending.r.code, name: n, brand: "", size: aSize.trim(), kind: aKind, giveBack: aGive };
+      const bad = aCat ? checkRow(row) : "";
+      if (bad) { setAErr(bad); return; }
+      if (aCat) onCatalog?.(row);
+      // the household gets the same kind and size the catalog gets
+      commit({ ...pending.r, product: { name: n, cat: aKind as (typeof CATS)[number], icon: pickIcon(n, aKind as (typeof CATS)[number]), size: aSize.trim() } }, n, live.current.ask);
+    }
+    else if (pending.kind === "fix") {
+      const n = name.trim(), row: CatalogRow = { code: pending.r.code, name: n, brand: "", size: aSize.trim(), kind: aKind, giveBack: false };
+      const bad = checkRow(row);
+      if (bad) { setAErr(bad); return; }
+      onCatalog?.(row); setPending(null);
+    }
     else if (pending.kind === "have") { setPending(null); addOrAsk(pending.r, pending.r.product!.name, mode); }
     else commit(pending.r, pending.r.product!.name, true);
   };
@@ -116,6 +142,13 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
             <div><h3>New product</h3><p class="meta">Type its name once. Next time it's found instantly.</p></div>
           </div>
           <input class="new-name" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} placeholder="e.g. Ube jam" aria-label="Product name" maxLength={40} />
+          {admin && <AdminFields kind={aKind} size={aSize} err={aErr} onKind={setAKind} onSize={setASize} />}
+          {admin && (
+            <>
+              <label class="ask"><input type="checkbox" checked={aCat} onChange={(e) => setACat((e.target as HTMLInputElement).checked)} /> Add to the shared catalog</label>
+              <label class="ask"><input type="checkbox" checked={aGive} disabled={!aCat} onChange={(e) => setAGive((e.target as HTMLInputElement).checked)} /> Offer to Open Food Facts</label>
+            </>
+          )}
           {ask && <PriceBox id="pr-new" text={priceText} err={priceErr} onInput={(t) => { setPriceText(t); setPriceErr(false); }} onEnter={() => finish(true)} />}
           <button class="big" disabled={!name.trim()} onClick={() => finish(true)}>Add to {mode === "home" ? "At Home" : "List"}</button>
           <button class="link" onClick={() => finish(false)}>Cancel</button>
@@ -148,6 +181,18 @@ export function Scan({ items, resolve, onAdd, onManual }: Props) {
         </form>
       )}
 
+      {pending?.kind === "fix" && (
+        <form class="result" onSubmit={(e) => { e.preventDefault(); finish(true); }}>
+          <div class="result-top"><span class="pic" aria-hidden="true">✏️</span><div><h3>Fix in catalog</h3><p class="meta">Barcode {pending.r.code}. Saved for everyone after the next update.</p></div></div>
+          <input class="new-name" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} aria-label="Product name" maxLength={40} />
+          <AdminFields kind={aKind} size={aSize} err={aErr} onKind={setAKind} onSize={setASize} />
+          <div class="two"><button class="big" type="submit" disabled={!name.trim()}>Save to catalog</button><button class="big outline" type="button" onClick={() => setPending(null)}>Cancel</button></div>
+        </form>
+      )}
+      {admin && !pending && last?.product && (
+        <button class="link" onClick={() => { setName(last.product!.name); setASize(last.product!.size); setAKind(last.product!.cat); setAErr(""); setPending({ r: last, kind: "fix" }); }}>Fix in catalog: {last.product.name}</button>
+      )}
+
       <div class={pending ? "scan-foot flow" : "scan-foot"}>
         <p class="mode-h" id="mode-h">Scanned items go to</p>
         <div class="mode" role="group" aria-labelledby="mode-h">
@@ -171,6 +216,18 @@ function PriceBox({ id, text, err, focus, onInput, onEnter }: { id: string; text
         aria-invalid={err} aria-describedby={err ? id + "-err" : undefined}
         onInput={(e) => onInput((e.target as HTMLInputElement).value)} onKeyDown={(e) => { if (e.key === "Enter" && onEnter) { e.preventDefault(); onEnter(); } }} />
       {err && <small id={id + "-err"} class="hint" role="alert">That doesn't look like a price. Use numbers like 45 or 45.50.</small>}
+    </div>
+  );
+}
+
+function AdminFields({ kind, size, err, onKind, onSize }: { kind: string; size: string; err: string; onKind: (k: string) => void; onSize: (s: string) => void }) {
+  return (
+    <div class="field-row">
+      <div class="field"><label for="a-kind">Kind</label>
+        <select id="a-kind" value={kind} onChange={(e) => onKind((e.target as HTMLSelectElement).value)}>{CATS.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+      <div class="field"><label for="a-size">Size, optional</label>
+        <input id="a-size" value={size} onInput={(e) => onSize((e.target as HTMLInputElement).value)} maxLength={30} placeholder="e.g. 150 g" aria-invalid={!!err} />
+        {err && <small class="hint" role="alert">{err}</small>}</div>
     </div>
   );
 }

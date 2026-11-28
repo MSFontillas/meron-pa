@@ -7,7 +7,7 @@ import { VitePWA } from "vite-plugin-pwa";
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval' https://www.google.com https://www.gstatic.com",
-  "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://www.google.com https://recaptcha.google.com https://world.openfoodfacts.org https://world.openbeautyfacts.org https://world.openproductsfacts.org https://world.openpetfoodfacts.org",
+  "connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://api.github.com https://www.google.com https://recaptcha.google.com https://world.openfoodfacts.org https://world.openbeautyfacts.org https://world.openproductsfacts.org https://world.openpetfoodfacts.org",
   "frame-src https://www.google.com https://recaptcha.google.com",
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",

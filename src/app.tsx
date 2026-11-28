@@ -14,6 +14,9 @@ import { Scan, type ScanResult, type Where } from "./screens/Scan";
 import { Tutorial, tutorialSeen } from "./screens/Tutorial";
 import { StockCheck } from "./screens/StockCheck";
 import { EditSheet, ShareSheet, JoinSheet, type EditValues } from "./screens/Sheets";
+import { AdminSheet } from "./screens/AdminSheet";
+import { getToken, setToken, queued, enqueue, flush } from "./admin/outbox";
+import type { CatalogRow } from "./data/catalogRows";
 
 type Tab = "home" | "scan" | "list";
 
@@ -32,6 +35,11 @@ export function App() {
   const [checking, setChecking] = useState(false);
   const [tutorial, setTutorial] = useState(() => !tutorialSeen());
   const timer = useRef<number | undefined>(undefined);
+  // Admin mode: a GitHub token on this phone lets names typed in Scan go into the shared catalog.
+  const [token, setTok] = useState(getToken());
+  const [waiting, setWaiting] = useState(() => queued().length);
+  const [adminOpen, setAdminOpen] = useState(() => location.hash === "#admin");
+  const sendTimer = useRef<number | undefined>(undefined);
 
   const say = (msg: string, undo?: () => void) => {
     setToast({ msg, undo }); clearTimeout(timer.current);
@@ -58,11 +66,22 @@ export function App() {
   }, [ready, home]);
 
   useEffect(() => {
-    const onHash = () => setJoinId(joinIdFromHash(location.hash));
+    const onHash = () => { setJoinId(joinIdFromHash(location.hash)); if (location.hash === "#admin") setAdminOpen(true); };
     addEventListener("hashchange", onHash);
     return () => removeEventListener("hashchange", onHash);
   }, []);
 
+  const send = async (): Promise<string> => {
+    const t = getToken(); if (!t) return "Not connected.";
+    try { const n = await flush(t); setWaiting(queued().length); return n ? `Sent ${n}. Others get it in a few minutes.` : "Nothing to send."; }
+    catch (e) { return e instanceof Error ? e.message : "Could not send."; }
+  };
+  const toCatalog = (row: CatalogRow) => {
+    setWaiting(enqueue(row));
+    clearTimeout(sendTimer.current);
+    sendTimer.current = window.setTimeout(() => { if (navigator.onLine) send(); }, 30000);
+  };
+  const closeAdmin = () => { setAdminOpen(false); if (location.hash === "#admin") clearHash(); };
   const clearHash = () => history.replaceState(null, "", location.pathname + location.search);
 
   if (ready !== "ok") {
@@ -125,7 +144,7 @@ export function App() {
   };
 
   // Behind a dialog nothing can be reached by keyboard or screen reader.
-  const modal = !!(edit || sharing || checking || (joinId && joinId !== home) || tutorial);
+  const modal = !!(adminOpen || edit || sharing || checking || (joinId && joinId !== home) || tutorial);
   const bg = modal ? { inert: true } : {};
   return (
     <div class="app">
@@ -133,6 +152,7 @@ export function App() {
         <h1>{title}</h1>
         <div class="top-row">
           <button class="theme-btn" aria-label="Switch light or dark mode" onClick={() => setIsDark(toggleTheme())}>{isDark ? "☀️" : "🌙"}</button>
+          {token && <button class="top-btn" onClick={() => setAdminOpen(true)}>Admin{waiting > 0 ? ` (${waiting})` : ""}</button>}
           <button class="top-btn" onClick={() => setSharing(true)}>Share list</button>
         </div>
       </header>
@@ -144,7 +164,7 @@ export function App() {
               onOut={(i) => { store.ranOut(home, i, fail); undoable(i, `${i.name} ran out, added to your list`); }}
               onDelete={(i) => { store.removeItem(home, i, fail); undoable(i, `${i.name} deleted`); }}
               onEdit={(i) => setEdit(i)} onAdd={() => setEdit("new")} onCheck={() => setChecking(true)} />
-          : tab === "scan" ? <Scan items={list} resolve={resolve} onAdd={onScanAdd} onManual={() => setEdit("new")} />
+          : tab === "scan" ? <Scan items={list} resolve={resolve} onAdd={onScanAdd} onManual={() => setEdit("new")} admin={!!token} onCatalog={toCatalog} />
           : <List items={list} sizes={sizes} onCheck={() => setChecking(true)}
               onRemove={(i) => { store.removeFromList(home, i, fail); undoable(i, `${i.name} removed from your list`); }}
               onTick={(i, v) => store.setInBasket(home, i, v, fail)}
@@ -157,6 +177,9 @@ export function App() {
       </nav>
       {edit && <EditSheet item={edit === "new" ? null : edit} onSave={saveEdit} onClose={() => setEdit(null)}
         onRemove={edit === "new" ? undefined : () => { store.removeItem(home, edit, fail); setEdit(null); say("Removed"); }} />}
+      {adminOpen && <AdminSheet connected={!!token} waiting={waiting}
+        onConnect={(t) => { setToken(t); setTok(t); }} onSend={send}
+        onSignOut={() => { setToken(null); setTok(null); }} onClose={closeAdmin} />}
       {sharing && <ShareSheet link={shareLink(home)} onClose={() => setSharing(false)}
         onNewList={() => { const id = newHomeId(); setHomeId(id); setHome(id); setSharing(false); say("New empty list started"); }}
         onBack={getPrevHomeId() ? () => { const id = getPrevHomeId()!; setHomeId(id); setHome(id); setSharing(false); say("Back on your previous list"); } : undefined} />}
