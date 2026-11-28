@@ -12,9 +12,8 @@ import { AtHome } from "./screens/AtHome";
 import { List } from "./screens/List";
 import { Scan, type ScanResult, type Where } from "./screens/Scan";
 import { Tutorial, tutorialSeen } from "./screens/Tutorial";
-import { StockCheck } from "./screens/StockCheck";
-import { EditSheet, ShareSheet, JoinSheet, type EditValues } from "./screens/Sheets";
-import { AdminSheet } from "./screens/AdminSheet";
+import { Lazy } from "./screens/Lazy";
+import { EditSheet, JoinSheet, type EditValues } from "./screens/Sheets";
 import { getToken, setToken, queued, enqueue, flush } from "./admin/outbox";
 import type { CatalogRow } from "./data/catalogRows";
 
@@ -177,17 +176,17 @@ export function App() {
       </nav>
       {edit && <EditSheet item={edit === "new" ? null : edit} onSave={saveEdit} onClose={() => setEdit(null)}
         onRemove={edit === "new" ? undefined : () => { store.removeItem(home, edit, fail); setEdit(null); say("Removed"); }} />}
-      {adminOpen && <AdminSheet connected={!!token} waiting={waiting}
+      {adminOpen && <Lazy load={() => import("./screens/AdminSheet").then((m) => m.AdminSheet)} connected={!!token} waiting={waiting}
         onConnect={(t) => { setToken(t); setTok(t); }} onSend={send}
         onSignOut={() => { setToken(null); setTok(null); }} onClose={closeAdmin} />}
-      {sharing && <ShareSheet link={shareLink(home)} onClose={() => setSharing(false)}
+      {sharing && <Lazy load={() => import("./screens/ShareSheet").then((m) => m.ShareSheet)} link={shareLink(home)} onClose={() => setSharing(false)}
         onNewList={() => { const id = newHomeId(); setHomeId(id); setHome(id); setSharing(false); say("New empty list started"); }}
         onBack={getPrevHomeId() ? () => { const id = getPrevHomeId()!; setHomeId(id); setHome(id); setSharing(false); say("Back on your previous list"); } : undefined} />}
       {joinId && joinId !== home && <JoinSheet myCount={list.length} onJoin={join} onCancel={() => { setJoinId(null); clearHash(); }} />}
       <div class={toast ? "toast" : "toast sr"}>
         <span role="status">{toast?.msg}</span>{toast?.undo && <button class="toast-undo" onClick={toast.undo}>Undo</button>}
       </div>
-      {checking && <StockCheck items={list} sizes={sizes}
+      {checking && <Lazy load={() => import("./screens/StockCheck").then((m) => m.StockCheck)} items={list} sizes={sizes}
         onAnswer={(i, s) => store.setStock(home, i, s, fail)}
         onClose={(goList) => { setChecking(false); if (goList) setTab("list"); }} />}
       {tutorial && !(joinId && joinId !== home) && <Tutorial onDone={() => setTutorial(false)} />}
